@@ -100,7 +100,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp
@@ -556,7 +555,7 @@ fun DashboardScreen(
                 onJoin = {
                     settings?.putBoolean("support_dialog_dismissed", true)
                     showSupportDialog = false
-                    /* lux: no telegram */ Unit
+                    uriHandler.openUri(TelegramChannelUrl)
                 },
                 onSkip = {
                     settings?.putBoolean("support_dialog_dismissed", true)
@@ -577,9 +576,9 @@ fun DashboardScreen(
     }
 }
 
+private const val TelegramChannelUrl = "https://t.me/PowerSigma"
 
 @Composable
-
 private fun SupportDialog(
     autoShow: Boolean,
     onJoin: () -> Unit,
@@ -587,28 +586,209 @@ private fun SupportDialog(
     onCancel: () -> Unit,
     scaleFactor: Float
 ) {
-    // Replaced telegram note with lux creator shimmer — keep call-site compat but show Create by @iprez
     Dialog(
         onDismissRequest = { if (autoShow) onSkip() else onCancel() },
         properties = DialogProperties(usePlatformDefaultWidth = false)
     ) {
-        val infinite = rememberInfiniteTransition(label = "creator_shimmer")
-        val shimmer by infinite.animateFloat(initialValue = -1f, targetValue = 1.4f, animationSpec = infiniteRepeatable(tween(1600, easing = LinearEasing)), label = "shimmer")
-        val pulse by infinite.animateFloat(initialValue = 0.97f, targetValue = 1.04f, animationSpec = infiniteRepeatable(tween(700, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "pulse")
-        Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            Card(modifier = Modifier.fillMaxWidth().graphicsLayer(scaleX = pulse, scaleY = pulse), shape = RoundedCornerShape(22.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFF1A1A1D)), border = BorderStroke(1.dp, Color(0xFFD4AF37).copy(alpha = 0.35f))) {
-                Box(modifier = Modifier.fillMaxWidth().background(Brush.linearGradient(listOf(Color(0xFFD4AF37).copy(alpha = 0.08f), Color.Transparent, Color(0xFFFFD700).copy(alpha = 0.10f)), start = Offset(shimmer*260f - 120f, 0f), end = Offset(shimmer*260f + 140f, 220f))).padding((22 * scaleFactor).dp), contentAlignment = Alignment.Center) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Box(modifier = Modifier.size((56 * scaleFactor).dp).clip(CircleShape).background(Brush.radialGradient(listOf(Color(0xFFFFD700), Color(0xFFD4AF37), Color(0xFF8C6A12)))).border(2.dp, Color.White.copy(alpha = 0.22f), CircleShape), contentAlignment = Alignment.Center) {
-                            Text("@", color = Color(0xFF0A0A0B), fontWeight = FontWeight.Black, fontSize = (24 * scaleFactor).sp)
+        val strings = LocalAppStrings.current
+        val isRtl = strings is StringsFa
+        CompositionLocalProvider(LocalLayoutDirection provides if (isRtl) LayoutDirection.Rtl else LayoutDirection.Ltr) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp)
+        ) {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(containerColor = IosCardBg),
+                border = BorderStroke(1.dp, Color.White.copy(alpha = 0.1f))
+            ) {
+                Column(
+                    modifier = Modifier.padding((20 * scaleFactor).dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        strings.SUPPORT_AETHERST,
+                        modifier = Modifier.fillMaxWidth(),
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = (18 * scaleFactor).sp,
+                        textAlign = TextAlign.Center,
+                        style = androidx.compose.material3.LocalTextStyle.current.copy(
+                            textDirection = if (isRtl) TextDirection.Rtl else TextDirection.Ltr
+                        )
+                    )
+                    Spacer(modifier = Modifier.height((10 * scaleFactor).dp))
+                    Text(
+                        strings.SUPPORT_DIALOG_DESC,
+                        modifier = Modifier.fillMaxWidth(),
+                        color = Color.White.copy(alpha = 0.8f),
+                        fontSize = (13 * scaleFactor).sp,
+                        lineHeight = (18 * scaleFactor).sp,
+                        textAlign = TextAlign.Center,
+                        style = androidx.compose.material3.LocalTextStyle.current.copy(
+                            textDirection = if (isRtl) TextDirection.Rtl else TextDirection.Ltr
+                        )
+                    )
+                    Spacer(modifier = Modifier.height((20 * scaleFactor).dp))
+                    Button(
+                        onClick = onJoin,
+                        modifier = Modifier.fillMaxWidth().height((48 * scaleFactor).dp),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = IosActiveBlue, contentColor = Color.White)
+                    ) {
+                        Icon(Icons.AutoMirrored.Filled.Send, null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            strings.JOIN_TELEGRAM,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = (14 * scaleFactor).sp,
+                            maxLines = 1,
+                            softWrap = false,
+                            textAlign = TextAlign.Center,
+                            style = androidx.compose.material3.LocalTextStyle.current.copy(
+                                textDirection = if (isRtl) TextDirection.Rtl else TextDirection.Ltr
+                            )
+                        )
+                    }
+                    Spacer(modifier = Modifier.height((8 * scaleFactor).dp))
+                    TextButton(
+                        onClick = { if (autoShow) onSkip() else onCancel() },
+                        modifier = Modifier.fillMaxWidth().height((42 * scaleFactor).dp)
+                    ) {
+                        Text(
+                            if (autoShow) strings.SKIP else strings.CANCEL,
+                            color = IosSecondaryLabel,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = (13 * scaleFactor).sp,
+                            textAlign = TextAlign.Center,
+                            style = androidx.compose.material3.LocalTextStyle.current.copy(
+                                textDirection = if (isRtl) TextDirection.Rtl else TextDirection.Ltr
+                            )
+                        )
+                    }
+                }
+            }
+        }
+        }
+    }
+}
+
+@Composable
+fun AdminRequiredDialog(
+    onRelaunch: () -> Unit,
+    onDismiss: () -> Unit,
+    scaleFactor: Float = 1f
+) {
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        val strings = LocalAppStrings.current
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = 0.6f))
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = onDismiss
+                )
+                .padding(horizontal = (24 * scaleFactor).dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Card(
+                modifier = Modifier
+                    .widthIn(max = (340 * scaleFactor).dp)
+                    .fillMaxWidth()
+                    .clickable(enabled = false) { },
+                shape = RoundedCornerShape(24.dp),
+                colors = CardDefaults.cardColors(containerColor = AppPalette.surfaceRaised),
+                border = BorderStroke(1.dp, Color.White.copy(alpha = 0.12f)),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+            ) {
+                Column(
+                    modifier = Modifier.padding((24 * scaleFactor).dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size((64 * scaleFactor).dp)
+                            .clip(CircleShape)
+                            .background(AppPalette.statusError.copy(alpha = 0.15f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Shield,
+                            contentDescription = null,
+                            tint = AppPalette.statusError,
+                            modifier = Modifier.size((32 * scaleFactor).dp)
+                        )
+                    }
+                    
+                    Spacer(modifier = Modifier.height((20 * scaleFactor).dp))
+                    
+                    Text(
+                        text = strings.ADMIN_REQUIRED,
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White,
+                        fontSize = (20 * scaleFactor).sp,
+                        textAlign = TextAlign.Center
+                    )
+                    
+                    Spacer(modifier = Modifier.height((12 * scaleFactor).dp))
+                    
+                    Text(
+                        text = strings.ADMIN_REQUIRED_DESC,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color.White.copy(alpha = 0.7f),
+                        fontSize = (14 * scaleFactor).sp,
+                        textAlign = TextAlign.Center,
+                        lineHeight = 20.sp
+                    )
+                    
+                    Spacer(modifier = Modifier.height((32 * scaleFactor).dp))
+                    
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy((12 * scaleFactor).dp)
+                    ) {
+                        Button(
+                            onClick = onRelaunch,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height((52 * scaleFactor).dp),
+                            shape = RoundedCornerShape(14.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = AppPalette.accent,
+                                contentColor = Color.White
+                            )
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.FlashOn, null, modifier = Modifier.size(18.dp))
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = strings.RELAUNCH_AS_ADMIN,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = (15 * scaleFactor).sp
+                                )
+                            }
                         }
-                        Spacer(modifier = Modifier.height((14 * scaleFactor).dp))
-                        Text("Create by @iprez", color = Color.White, fontWeight = FontWeight.Black, fontSize = (20 * scaleFactor).sp, letterSpacing = 0.5.sp, textAlign = TextAlign.Center)
-                        Spacer(modifier = Modifier.height((6 * scaleFactor).dp))
-                        Text("AuroraVPN · Lux Edition", color = Color(0xFFD4AF37), fontWeight = FontWeight.SemiBold, fontSize = (12 * scaleFactor).sp, letterSpacing = 1.2.sp, textAlign = TextAlign.Center)
-                        Spacer(modifier = Modifier.height((18 * scaleFactor).dp))
-                        Button(onClick = { onSkip() }, modifier = Modifier.fillMaxWidth().height((48 * scaleFactor).dp), shape = RoundedCornerShape(14.dp), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD4AF37), contentColor = Color(0xFF0A0A0B))) {
-                            Text("بزن بریم ✨", fontWeight = FontWeight.Bold, fontSize = (15 * scaleFactor).sp)
+                        
+                        TextButton(
+                            onClick = onDismiss,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height((52 * scaleFactor).dp),
+                            shape = RoundedCornerShape(14.dp)
+                        ) {
+                            Text(
+                                text = strings.CANCEL,
+                                color = Color.White.copy(alpha = 0.5f),
+                                fontWeight = FontWeight.Medium,
+                                fontSize = (15 * scaleFactor).sp
+                            )
                         }
                     }
                 }
@@ -617,6 +797,1196 @@ private fun SupportDialog(
     }
 }
 
+@Composable
+fun ProxyOverlayPill(
+    host: String,
+    socksPort: String,
+    httpPort: String,
+    onHide: () -> Unit,
+    onCopy: (String) -> Unit,
+    scaleFactor: Float,
+    psiphonEnabled: Boolean = false,
+    psiphonPort: String = "3080"
+) {
+    val socksAddress = "$host:$socksPort"
+    val httpAddress = "$host:$httpPort"
+    val psiphonAddress = "$host:$psiphonPort"
+
+    Surface(
+        modifier = Modifier
+            .widthIn(max = 400.dp)
+            .padding(horizontal = 8.dp)
+            .shadow(24.dp, RoundedCornerShape(20.dp), spotColor = IosActiveBlue.copy(alpha = 0.4f)),
+        shape = RoundedCornerShape(20.dp),
+        color = AppPalette.surfaceRaised.copy(alpha = 0.95f),
+        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.12f))
+    ) {
+        Row(
+            modifier = Modifier.padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(CircleShape)
+                    .background(IosActiveBlue.copy(alpha = 0.15f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(Icons.Default.Dns, null, tint = IosActiveBlue, modifier = Modifier.size(20.dp))
+            }
+            
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                ProxyCopyRow(
+                    label = "SOCKS5",
+                    address = socksAddress,
+                    onCopy = {
+                        onCopy(socksAddress)
+                    },
+                    scaleFactor = scaleFactor
+                )
+                ProxyCopyRow(
+                    label = "HTTP",
+                    address = httpAddress,
+                    onCopy = {
+                        onCopy(httpAddress)
+                    },
+                    scaleFactor = scaleFactor
+                )
+                if (psiphonEnabled) {
+                    ProxyCopyRow(
+                        label = "Psiphon",
+                        address = psiphonAddress,
+                        onCopy = {
+                            onCopy(psiphonAddress)
+                        },
+                        scaleFactor = scaleFactor
+                    )
+                }
+            }
+
+            VerticalDivider(modifier = Modifier.height(36.dp), thickness = 1.dp, color = Color.White.copy(alpha = 0.1f))
+
+            IconButton(
+                onClick = onHide,
+                modifier = Modifier.size(32.dp)
+            ) {
+                Icon(Icons.Default.Close, null, tint = IosSecondaryLabel, modifier = Modifier.size(20.dp))
+            }
+        }
+    }
+}
+
+@Composable
+private fun ProxyCopyRow(
+    label: String,
+    address: String,
+    onCopy: () -> Unit,
+    scaleFactor: Float
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(8.dp))
+            .clickable { onCopy() }
+            .padding(vertical = 2.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+            Text(
+                text = "$label:",
+                style = MaterialTheme.typography.labelSmall,
+                color = IosActiveBlue,
+                fontWeight = FontWeight.ExtraBold,
+                fontSize = (9 * scaleFactor).sp
+            )
+            Spacer(modifier = Modifier.width(6.dp))
+            Text(
+                text = address,
+                style = MaterialTheme.typography.bodyMedium,
+                color = Color.White,
+                fontWeight = FontWeight.SemiBold,
+                fontSize = (12 * scaleFactor).sp,
+                maxLines = 1
+            )
+        }
+        Icon(
+            imageVector = Icons.Default.ContentCopy,
+            contentDescription = "Copy",
+            tint = Color.White.copy(alpha = 0.6f),
+            modifier = Modifier.size((14 * scaleFactor).dp)
+        )
+    }
+}
+
+@Composable
+fun WindowsProxyPortsCard(
+    config: AetherConfig,
+    onCopy: (String) -> Unit,
+    scaleFactor: Float
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = IosCardBg)
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = (12 * scaleFactor).dp, vertical = (10 * scaleFactor).dp),
+            verticalArrangement = Arrangement.spacedBy((6 * scaleFactor).dp)
+        ) {
+            Text(
+                text = "PROXY PORTS",
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.Bold,
+                letterSpacing = 0.8.sp,
+                color = IosSecondaryLabel,
+                fontSize = (8.5 * scaleFactor).sp
+            )
+            ProxyCopyRow(
+                label = "Counted",
+                address = "127.0.0.1:10808 / 127.0.0.1:10809",
+                onCopy = { onCopy("127.0.0.1:10808") },
+                scaleFactor = scaleFactor
+            )
+            HorizontalDivider(color = Color.White.copy(alpha = 0.08f), thickness = 0.5.dp)
+            ProxyCopyRow(
+                label = "Core",
+                address = "${config.socksHost}:${config.socksPort} / ${config.socksHost}:${config.httpPort}",
+                onCopy = { onCopy("${config.socksHost}:${config.socksPort}") },
+                scaleFactor = scaleFactor
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun IosStatusHeroCard(
+    connectionStatus: ConnectionStatus,
+    elapsedSeconds: Long,
+    sessionTraffic: SessionTraffic,
+    config: AetherConfig,
+    ipInfo: IpInfo = IpInfo(),
+    pingState: PingState = PingState(),
+    onRefreshIpInfo: () -> Unit = {},
+    onRefreshPing: () -> Unit = {},
+    onCopy: (String) -> Unit = {},
+    hideConfigChips: Boolean = false,
+    scaleFactor: Float = 1f
+) {
+    val strings = LocalAppStrings.current
+    val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
+    val statusColor by animateColorAsState(
+        targetValue = when (connectionStatus) {
+            ConnectionStatus.RUNNING, ConnectionStatus.TUN_ACTIVE -> IosActiveGreen
+            ConnectionStatus.STARTING, ConnectionStatus.VALIDATING, ConnectionStatus.DATAPLANE_VALIDATED, ConnectionStatus.SOCKS_READY, ConnectionStatus.RECONNECTING, ConnectionStatus.STOPPING -> IosScanningAmber
+            ConnectionStatus.ERROR, ConnectionStatus.FAILED -> IosErrorRed
+            ConnectionStatus.STOPPED -> IosSecondaryLabel
+        },
+        label = "statusColor"
+    )
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .testTag("status_hero_card"),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = IosCardBg),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            statusColor.copy(alpha = 0.12f),
+                            Color.Transparent
+                        )
+                    )
+                )
+                .padding((14 * scaleFactor).dp)
+        ) {
+            Column {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            modifier = Modifier
+                                .size((7 * scaleFactor).dp)
+                                .clip(CircleShape)
+                                .background(statusColor)
+                        )
+                        Spacer(modifier = Modifier.width((5 * scaleFactor).dp))
+                                Text(
+                                    text = when (connectionStatus) {
+                                        ConnectionStatus.RUNNING, ConnectionStatus.TUN_ACTIVE -> if (config.connectionMode == ConnectionMode.TUNNEL) strings.STATUS_PROTECTED_CONNECTED else strings.STATUS_PROXY_ACTIVE
+                                        ConnectionStatus.STARTING -> strings.STATUS_FINDING_SERVERS
+                                        ConnectionStatus.VALIDATING, ConnectionStatus.DATAPLANE_VALIDATED -> strings.STATUS_ESTABLISHING_LINK
+                                        ConnectionStatus.SOCKS_READY -> strings.STATUS_CONNECTING
+                                        ConnectionStatus.RECONNECTING -> strings.STATUS_RECONNECTING
+            ConnectionStatus.STOPPING -> strings.STATUS_SWIPE_FORCE_STOP
+                                        ConnectionStatus.ERROR, ConnectionStatus.FAILED -> strings.STATUS_CONNECTION_ERROR
+                                        ConnectionStatus.STOPPED -> strings.STATUS_READY_TO_CONNECT
+                                    },
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    letterSpacing = 0.8.sp,
+                                    color = statusColor,
+                                    fontSize = (8.5 * scaleFactor).sp
+                                )
+                    }
+
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = IosGroupBg
+                    ) {
+                        val protocolText = if (config.protocol == AetherProtocol.MASQUE) {
+                            if (config.h2Mode) "MASQUE (H2)" else "MASQUE (H3)"
+                        } else {
+                            config.protocol.displayName
+                        }
+                        Text(
+                            text = protocolText,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = IosActiveBlue,
+                            fontSize = (8.5 * scaleFactor).sp
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height((10 * scaleFactor).dp))
+
+                Row(
+                    verticalAlignment = Alignment.Bottom,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column {
+                        Text(
+                            text = formatTime(elapsedSeconds),
+                            style = MaterialTheme.typography.headlineLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White,
+                            fontSize = (28 * scaleFactor).sp
+                        )
+                    }
+
+                    if (connectionStatus == ConnectionStatus.RUNNING) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .clickable { onRefreshPing() }
+                                .padding(2.dp)
+                        ) {
+                            if (pingState.isPinging) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size((11 * scaleFactor).dp),
+                                    color = IosActiveBlue,
+                                    strokeWidth = 1.5.dp
+                                )
+                            } else {
+                                Icon(
+                                    imageVector = Icons.Default.Speed,
+                                    contentDescription = "Ping",
+                                    tint = if (pingState.error != null) IosErrorRed else IosActiveBlue,
+                                    modifier = Modifier.size((15 * scaleFactor).dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(2.dp))
+                            Text(
+                                text = when {
+                                    pingState.isPinging -> "..."
+                                    pingState.error != null -> "TIMEOUT"
+                                    pingState.ms >= 0 -> "${pingState.ms}ms"
+                                    else -> "PING"
+                                },
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = if (pingState.error != null) IosErrorRed else IosActiveBlue,
+                                fontSize = (12 * scaleFactor).sp
+                            )
+                        }
+                    } else {
+                        Text(
+                            text = if (connectionStatus == ConnectionStatus.RECONNECTING) strings.DASHBOARD_RETRY else strings.DASHBOARD_NO_UPLINK,
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = if (connectionStatus == ConnectionStatus.RECONNECTING) IosScanningAmber else IosSecondaryLabel,
+                            modifier = Modifier.clickable { onRefreshPing() },
+                            fontSize = (10 * scaleFactor).sp
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height((8 * scaleFactor).dp))
+
+                CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+                if (connectionStatus == ConnectionStatus.RUNNING) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(IosGroupBg)
+                            .padding(horizontal = 8.dp, vertical = 6.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        TrafficValue(
+                            label = "UPLOAD",
+                            value = formatTrafficBytes(sessionTraffic.uploadedBytes),
+                            speed = sessionTraffic.uploadSpeedBps,
+                            color = IosActiveBlue,
+                            alignment = Alignment.Start,
+                            modifier = Modifier.weight(1f),
+                            scaleFactor = scaleFactor
+                        )
+                        TrafficValue(
+                            label = "DOWNLOAD",
+                            value = formatTrafficBytes(sessionTraffic.downloadedBytes),
+                            speed = sessionTraffic.downloadSpeedBps,
+                            color = IosActiveGreen,
+                            alignment = Alignment.End,
+                            modifier = Modifier.weight(1f),
+                            scaleFactor = scaleFactor
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height((8 * scaleFactor).dp))
+
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(8.dp))
+                        .combinedClickable(
+                            onClick = { onRefreshIpInfo() },
+                            onLongClick = {
+                                if (ipInfo.ip.isNotEmpty()) {
+                                    onCopy(ipInfo.ip)
+                                }
+                            }
+                        ),
+                    color = IosGroupBg
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(
+                            modifier = Modifier.weight(1f),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            if (ipInfo.countryCode.isNotEmpty()) {
+                                CountryFlag(
+                                    countryCode = ipInfo.countryCode,
+                                    size = (20 * scaleFactor).dp
+                                )
+                            } else {
+                                Text(
+                                    text = "🌐",
+                                    fontSize = (16 * scaleFactor).sp
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Column {
+                                Text(
+                                    text = when {
+                                        ipInfo.country.isNotEmpty() -> if (ipInfo.countryCode.isNotEmpty()) "${ipInfo.country} (${ipInfo.countryCode})" else ipInfo.country
+                                        ipInfo.isLoading -> strings.DASHBOARD_IP_WAIT
+                                        ipInfo.error != null -> strings.DASHBOARD_IP_ERROR
+                                        else -> strings.DASHBOARD_IP_UNKNOWN
+                                    },
+                                    style = MaterialTheme.typography.labelLarge.copy(
+                                        textDirection = if (ipInfo.country.isNotEmpty()) TextDirection.Ltr else if (isRtl) TextDirection.Rtl else TextDirection.Ltr
+                                    ),
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color.White,
+                                    fontSize = (11 * scaleFactor).sp
+                                )
+                            Text(
+                                text = when {
+                                    ipInfo.ip.isNotEmpty() -> ipInfo.ip
+                                    ipInfo.isLoading -> strings.DASHBOARD_IP_LOCATING
+                                    ipInfo.error != null -> strings.DASHBOARD_IP_NOT_FOUND
+                                    else -> strings.DASHBOARD_IP_SHOW
+                                },
+                                style = MaterialTheme.typography.bodySmall.copy(
+                                    textDirection = if (ipInfo.ip.isNotEmpty()) TextDirection.Ltr else if (isRtl) TextDirection.Rtl else TextDirection.Ltr
+                                ),
+                                color = when {
+                                    ipInfo.error != null -> IosErrorRed
+                                    ipInfo.isLoading -> IosScanningAmber
+                                    else -> IosSecondaryLabel
+                                },
+                                fontSize = (9 * scaleFactor).sp
+                            )
+                            }
+                        }
+
+                        if (ipInfo.isLoading) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size((12 * scaleFactor).dp),
+                                color = IosActiveBlue,
+                                strokeWidth = 1.5.dp
+                            )
+                        } else {
+                            Icon(
+                                imageVector = Icons.Default.Refresh,
+                                contentDescription = "Refresh",
+                                tint = IosSecondaryLabel,
+                                modifier = Modifier.size((12 * scaleFactor).dp)
+                            )
+                        }
+                    }
+                }
+                }
+
+                if (!hideConfigChips) {
+                    Spacer(modifier = Modifier.height((10 * scaleFactor).dp))
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(IosGroupBg)
+                            .padding(6.dp),
+                        horizontalArrangement = Arrangement.SpaceAround
+                    ) {
+                        IosConfigChip(label = "BYPASS", value = config.noise.displayName.split(" ")[0], scaleFactor = scaleFactor)
+                        IosConfigChip(label = "SPEED", value = config.scanMode.name.take(6), scaleFactor = scaleFactor)
+                        IosConfigChip(label = "NETWORK", value = config.ipMode.rawValue, scaleFactor = scaleFactor)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun TrafficValue(label: String, value: String, color: Color, alignment: Alignment.Horizontal, modifier: Modifier = Modifier, speed: Double = 0.0, scaleFactor: Float = 1f) {
+    Column(modifier = modifier.heightIn(min = 38.dp), horizontalAlignment = alignment) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.Bold,
+            color = IosSecondaryLabel,
+            fontSize = (8 * scaleFactor).sp,
+            maxLines = 1
+        )
+        Text(
+            text = value,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = color,
+            fontSize = (12 * scaleFactor).sp,
+            maxLines = 1,
+            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+        )
+        Text(
+            text = if (speed > 0) formatSpeedValue(speed) else "0 B/s",
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.SemiBold,
+            color = if (speed > 0) color.copy(alpha = 0.7f) else IosSecondaryLabel.copy(alpha = 0.55f),
+            fontSize = (8 * scaleFactor).sp,
+            maxLines = 1,
+            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+        )
+    }
+}
+
+@Composable
+fun IosConfigChip(label: String, value: String, scaleFactor: Float = 1f) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(text = label, style = MaterialTheme.typography.labelSmall, color = IosSecondaryLabel, fontSize = (8 * scaleFactor).sp, fontWeight = FontWeight.Bold)
+        Text(text = value, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, color = Color.White, fontSize = (10 * scaleFactor).sp)
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun IosPowerButton(
+    connectionStatus: ConnectionStatus,
+    onToggle: () -> Unit,
+    onRecover: () -> Unit = {},
+    size: Dp = 140.dp
+) {
+    val isConnected = connectionStatus == ConnectionStatus.RUNNING
+    val isWorking = connectionStatus == ConnectionStatus.STARTING ||
+                    connectionStatus == ConnectionStatus.VALIDATING ||
+                    connectionStatus == ConnectionStatus.RECONNECTING ||
+                    connectionStatus == ConnectionStatus.STOPPING
+    val isError = connectionStatus == ConnectionStatus.ERROR
+    val canToggle = true
+
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    val scope = rememberCoroutineScope()
+
+    val infiniteTransition = rememberInfiniteTransition(label = "refinedGlow")
+
+    val breathingScale by infiniteTransition.animateFloat(
+        initialValue = 1f,
+        targetValue = if (isWorking) 1.12f else 1f,
+        animationSpec = infiniteRepeatable(tween(1200, easing = FastOutSlowInEasing), RepeatMode.Reverse),
+        label = "breathingScale"
+    )
+
+    val buttonScale by animateFloatAsState(
+        targetValue = if (isPressed) 0.88f else if (isWorking) breathingScale else 1f,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
+        label = "buttonScale"
+    )
+
+    val cornerRadiusPercent by animateFloatAsState(
+        targetValue = if (isConnected || isWorking) 0.28f else 0.5f,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium),
+        label = "cornerRadius"
+    )
+
+    val buttonColor by animateColorAsState(
+        targetValue = when {
+            isConnected -> IosActiveGreen
+            isWorking -> IosScanningAmber
+            isError -> IosErrorRed
+            else -> IosActiveBlue
+        },
+        animationSpec = tween(durationMillis = 600),
+        label = "buttonColor"
+    )
+
+    val glowScale by infiniteTransition.animateFloat(
+        initialValue = 1.2f,
+        targetValue = if (isConnected) 1.8f else 1.5f,
+        animationSpec = infiniteRepeatable(tween(2500, easing = LinearEasing), RepeatMode.Reverse),
+        label = "glowScale"
+    )
+
+    val glowAlpha by infiniteTransition.animateFloat(
+        initialValue = 0.4f,
+        targetValue = 0.02f,
+        animationSpec = infiniteRepeatable(tween(2000, easing = LinearEasing), RepeatMode.Reverse),
+        label = "glowAlpha"
+    )
+
+    Box(
+        modifier = Modifier
+            .size(size * 2.5f),
+        contentAlignment = Alignment.Center
+    ) {
+        if (isWorking || isConnected) {
+            val pulseColor = buttonColor.copy(alpha = 0.45f)
+            val glowShape = RoundedCornerShape(size * cornerRadiusPercent)
+
+            Box(
+                modifier = Modifier
+                    .size(size)
+                    .graphicsLayer {
+                        scaleX = glowScale
+                        scaleY = glowScale
+                        alpha = glowAlpha
+                    }
+                    .background(pulseColor, glowShape)
+            )
+
+            if (isConnected) {
+                Box(
+                    modifier = Modifier
+                        .size(size)
+                        .graphicsLayer {
+                            scaleX = glowScale * 0.75f
+                            scaleY = glowScale * 0.75f
+                            alpha = glowAlpha * 1.8f
+                        }
+                        .background(pulseColor, glowShape)
+                )
+            }
+        }
+
+        Surface(
+            modifier = Modifier
+                .size(size)
+                .graphicsLayer {
+                    scaleX = buttonScale
+                    scaleY = buttonScale
+                }
+                .shadow(
+                    elevation = if (isPressed) 6.dp else 24.dp,
+                    shape = RoundedCornerShape(size * cornerRadiusPercent),
+                    ambientColor = buttonColor.copy(alpha = 0.6f),
+                    spotColor = buttonColor
+                )
+                .clip(RoundedCornerShape(size * cornerRadiusPercent))
+                .combinedClickable(
+                    interactionSource = interactionSource,
+                    indication = null,
+                    enabled = canToggle,
+                    onClick = {
+                        scope.launch {
+                            if (connectionStatus == ConnectionStatus.STOPPING) onRecover() else onToggle()
+                        }
+                    }
+                ),
+            color = buttonColor,
+            tonalElevation = 14.dp
+        ) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(
+                            Brush.verticalGradient(
+                                colors = listOf(
+                                    Color.White.copy(alpha = 0.35f),
+                                    Color.White.copy(alpha = 0.05f),
+                                    Color.Transparent
+                                )
+                            )
+                        )
+                )
+
+                Icon(
+                    imageVector = Icons.Default.PowerSettingsNew,
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier.size(size * 0.45f)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun CapsuleConnectButton(
+    connectionStatus: ConnectionStatus,
+    onToggle: () -> Boolean,
+    modifier: Modifier = Modifier,
+    scaleFactor: Float = 1f,
+    onRecover: () -> Unit = {}
+) {
+    val strings = LocalAppStrings.current
+    val sf = scaleFactor.coerceIn(0.7f, 1.1f)
+    val isConnected = connectionStatus == ConnectionStatus.RUNNING
+    val isWorking = connectionStatus in setOf(
+        ConnectionStatus.STARTING, ConnectionStatus.VALIDATING, ConnectionStatus.DATAPLANE_VALIDATED,
+        ConnectionStatus.SOCKS_READY, ConnectionStatus.TUN_ACTIVE, ConnectionStatus.RECONNECTING, ConnectionStatus.STOPPING
+    )
+    val isError = connectionStatus == ConnectionStatus.ERROR
+    val trackColor = when {
+        isConnected -> IosActiveGreen
+        isWorking -> IosScanningAmber
+        isError -> IosErrorRed
+        else -> IosGroupBg
+    }
+    val label = when {
+        connectionStatus == ConnectionStatus.STOPPING -> strings.FORCE_STOP
+        isWorking -> strings.CONNECTING_DOTS
+        isConnected -> strings.DISCONNECT
+        isError -> strings.RECONNECT
+        else -> strings.CONNECT
+    }
+    Box(
+        modifier = modifier
+            .height((56 * sf).dp.coerceIn(48.dp, 64.dp))
+            .clip(RoundedCornerShape(28.dp))
+            .background(trackColor)
+            .clickable { if (connectionStatus == ConnectionStatus.STOPPING) onRecover() else onToggle() },
+        contentAlignment = Alignment.Center
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(horizontal = (16 * sf).dp)
+        ) {
+            if (isWorking) {
+                CircularProgressIndicator(modifier = Modifier.size((18 * sf).dp), color = Color.White, strokeWidth = 2.5.dp)
+                Spacer(modifier = Modifier.width((8 * sf).dp))
+            }
+            androidx.compose.runtime.CompositionLocalProvider(androidx.compose.ui.platform.LocalLayoutDirection provides if (strings is StringsFa) androidx.compose.ui.unit.LayoutDirection.Rtl else androidx.compose.ui.unit.LayoutDirection.Ltr) {
+                Text(
+                    text = label,
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = ((if (strings is StringsFa) 13 else 14) * sf).coerceIn(11f, 15f).sp,
+                    letterSpacing = (if (strings is StringsFa) 0.1f else 0.6f * sf).sp,
+                    maxLines = 1,
+                    softWrap = false,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                    textAlign = TextAlign.Center
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun WindowsSwipeSwitch(
+    connectionStatus: ConnectionStatus,
+    onToggle: () -> Boolean,
+    modifier: Modifier = Modifier,
+    scaleFactor: Float = 1f,
+    onAdminCancelResetKey: Int = 0,
+    onRecover: () -> Unit = {},
+    onDraggingChanged: (Boolean) -> Unit = {},
+    isSwipeMode: Boolean = true
+) {
+    val strings = LocalAppStrings.current
+    val isConnected = connectionStatus == ConnectionStatus.RUNNING
+    val isWorking = connectionStatus == ConnectionStatus.STARTING ||
+            connectionStatus == ConnectionStatus.VALIDATING ||
+            connectionStatus == ConnectionStatus.DATAPLANE_VALIDATED ||
+            connectionStatus == ConnectionStatus.SOCKS_READY ||
+            connectionStatus == ConnectionStatus.TUN_ACTIVE ||
+            connectionStatus == ConnectionStatus.RECONNECTING ||
+            connectionStatus == ConnectionStatus.STOPPING
+    val isError = connectionStatus == ConnectionStatus.ERROR
+    val canSwipe = true
+    val scope = rememberCoroutineScope()
+    val offsetX = remember { Animatable(0f) }
+    var isDragging by remember { mutableStateOf(false) }
+    val latestOnToggle by rememberUpdatedState(onToggle)
+    val latestOnRecover by rememberUpdatedState(onRecover)
+    val latestConnectionStatus by rememberUpdatedState(connectionStatus)
+    val latestIsConnected by rememberUpdatedState(isConnected)
+    val latestIsWorking by rememberUpdatedState(isWorking)
+    val trackColor by animateColorAsState(
+        targetValue = when {
+            isConnected -> IosActiveGreen
+            isWorking -> IosScanningAmber
+            isError -> IosErrorRed
+            else -> IosGroupBg
+        }, label = "trackColor"
+    )
+    val text = when (connectionStatus) {
+        ConnectionStatus.STARTING -> strings.FINDING_SERVERS
+        ConnectionStatus.VALIDATING -> strings.VALIDATING
+        ConnectionStatus.DATAPLANE_VALIDATED, ConnectionStatus.SOCKS_READY, ConnectionStatus.TUN_ACTIVE -> strings.CONNECTING_DOTS
+        ConnectionStatus.RECONNECTING -> strings.STATUS_RECONNECTING
+        ConnectionStatus.STOPPING -> strings.STATUS_SWIPE_FORCE_STOP
+        ConnectionStatus.RUNNING -> if (isSwipeMode) strings.SWIPE_TO_DISCONNECT else strings.TAP_TO_DISCONNECT
+        ConnectionStatus.ERROR, ConnectionStatus.FAILED -> if (isSwipeMode) strings.SWIPE_TO_RECONNECT else strings.TAP_TO_RECONNECT
+        ConnectionStatus.STOPPED -> if (isSwipeMode) strings.SWIPE_TO_CONNECT else strings.TAP_TO_CONNECT
+    }
+    val hintTransition = rememberInfiniteTransition(label = "hint")
+    val hintShift by hintTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 10f,
+        animationSpec = infiniteRepeatable(tween(900, easing = FastOutSlowInEasing), RepeatMode.Reverse),
+        label = "hintShift"
+    )
+    val dotTransition = rememberInfiniteTransition(label = "dots")
+    val dotPhase by dotTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(tween(1200, easing = LinearEasing), RepeatMode.Restart),
+        label = "dotPhase"
+    )
+    val sf = scaleFactor.coerceIn(0.7f, 1.1f)
+    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+    BoxWithConstraints(
+        modifier = modifier
+            .widthIn(min = (280 * sf).dp, max = (360 * sf).dp)
+            .height((64 * sf).dp.coerceIn(52.dp, 72.dp))
+            .shadow(12.dp, RoundedCornerShape(36.dp), spotColor = trackColor.copy(alpha = 0.3f))
+            .clip(RoundedCornerShape(36.dp))
+            .background(Color.Transparent),
+        contentAlignment = Alignment.Center
+    ) {
+        val maxWidthPx = with(androidx.compose.ui.platform.LocalDensity.current) { maxWidth.toPx() }
+        val thumbSize = (48 * sf).dp.coerceIn(42.dp, 56.dp)
+        val thumbPx = with(androidx.compose.ui.platform.LocalDensity.current) { thumbSize.toPx() }
+        val horizontalPadding = (8 * sf).dp
+        val paddingPx = with(androidx.compose.ui.platform.LocalDensity.current) { horizontalPadding.toPx() }
+        val maxDrag = (maxWidthPx - thumbPx - paddingPx * 2).coerceAtLeast(0f)
+        val dragFraction = when {
+            !canSwipe || maxDrag == 0f -> 0f
+            isConnected -> (1f - offsetX.value / maxDrag).coerceIn(0f, 1f)
+            isWorking -> (offsetX.value / maxDrag).coerceIn(0f, 1f)
+            else -> 0f
+        }
+        val isDisconnectDrag = (isConnected || isWorking) && isDragging && dragFraction > 0.05f
+        val effectiveTrackColor = if (isDisconnectDrag) lerp(trackColor, IosErrorRed, dragFraction) else trackColor
+
+        LaunchedEffect(isConnected, isWorking, maxDrag) {
+            if (isDragging) return@LaunchedEffect
+            if (isWorking) {
+                offsetX.snapTo(if (isConnected) maxDrag else 0f)
+            } else {
+                offsetX.animateTo(
+                    targetValue = if (isConnected) maxDrag else 0f,
+                    animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium)
+                )
+            }
+        }
+        LaunchedEffect(onAdminCancelResetKey) {
+            if (!isConnected && !isWorking && offsetX.value != 0f && !isDragging) {
+                offsetX.animateTo(0f, spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow))
+            }
+        }
+
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .clip(RoundedCornerShape(36.dp))
+                .background(effectiveTrackColor.copy(alpha = if (isConnected || isDisconnectDrag) 1f else 0.95f)),
+            contentAlignment = Alignment.Center
+        ) {
+            androidx.compose.runtime.CompositionLocalProvider(androidx.compose.ui.platform.LocalLayoutDirection provides if (strings is StringsFa) androidx.compose.ui.unit.LayoutDirection.Rtl else androidx.compose.ui.unit.LayoutDirection.Ltr) {
+                Text(
+                    text = if (isDisconnectDrag) strings.RELEASE_TO_DISCONNECT else text,
+                    color = Color.White.copy(alpha = 0.95f),
+                    fontWeight = FontWeight.Bold,
+                    fontSize = ((if (strings is StringsFa) 10 else 11) * sf).coerceIn(9f, 12f).sp,
+                    letterSpacing = (if (strings is StringsFa) 0.15f else 0.6f * sf).sp,
+                    textAlign = TextAlign.Center,
+                    maxLines = 1,
+                    softWrap = false,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                    modifier = Modifier.padding(horizontal = ((if (strings is StringsFa) 50 else 56) * sf).dp)
+                )
+            }
+        }
+
+        val hintOffset = if (!isDragging && !isWorking) {
+            if (!isConnected) hintShift else -hintShift
+        } else 0f
+        Box(
+            modifier = Modifier
+                .align(Alignment.CenterStart)
+                .padding(horizontal = horizontalPadding)
+                .offset { androidx.compose.ui.unit.IntOffset((offsetX.value + hintOffset).toInt(), 0) }
+                .size(thumbSize)
+                .shadow(8.dp, CircleShape, clip = false)
+                .clip(CircleShape)
+                .background(Color.White)
+                .pointerInput(canSwipe, maxDrag) {
+                        if (!canSwipe) return@pointerInput
+                        detectHorizontalDragGestures(
+                            onDragStart = { isDragging = true; onDraggingChanged(true) },
+                            onDragEnd = {
+                                isDragging = false
+                                onDraggingChanged(false)
+                                scope.launch {
+                                    val threshold = if (latestIsWorking) maxDrag * 0.25f else maxDrag * 0.5f
+                                    val shouldTrigger = if (latestIsWorking) {
+                                        if (!latestIsConnected) offsetX.value > threshold else offsetX.value < maxDrag - threshold
+                                    } else {
+                                        if (!latestIsConnected) offsetX.value > threshold else offsetX.value < threshold
+                                    }
+                                    if (shouldTrigger) {
+                                        val success = if (latestConnectionStatus == ConnectionStatus.STOPPING) {
+                                            latestOnRecover()
+                                            true
+                                        } else latestOnToggle()
+                                        if (success) {
+                                            if (latestIsWorking) {
+                                                offsetX.animateTo(0f, spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow))
+                                            } else {
+                                                offsetX.animateTo(
+                                                    if (!latestIsConnected) maxDrag else 0f,
+                                                    spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow)
+                                                )
+                                            }
+                                        } else {
+                                            offsetX.animateTo(
+                                                if (latestIsConnected) maxDrag else 0f,
+                                                spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow)
+                                            )
+                                        }
+                                    } else {
+                                        offsetX.animateTo(
+                                            if (latestIsConnected) maxDrag else 0f,
+                                            animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow)
+                                        )
+                                    }
+                                }
+                            },
+                            onDragCancel = {
+                                isDragging = false
+                                onDraggingChanged(false)
+                                scope.launch {
+                                    offsetX.animateTo(
+                                        if (latestIsConnected) maxDrag else 0f,
+                                        spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow)
+                                    )
+                                }
+                            },
+                            onHorizontalDrag = { change, dragAmount ->
+                                change.consume()
+                                scope.launch {
+                                    val next = (offsetX.value + dragAmount).coerceIn(0f, maxDrag)
+                                    offsetX.snapTo(next)
+                                }
+                            }
+                        )
+                    },
+                contentAlignment = Alignment.Center
+            ) {
+                if (isWorking && !isDragging) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(22.dp),
+                        color = effectiveTrackColor,
+                        strokeWidth = 2.5.dp
+                    )
+                } else {
+                    Icon(
+                        imageVector = if (isConnected || isWorking) Icons.AutoMirrored.Filled.ArrowBack else Icons.AutoMirrored.Filled.ArrowForward,
+                        contentDescription = null,
+                        tint = IosActiveBlue,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+            }
+        if (!isWorking && !isConnected) {
+            val connectFraction = if (maxDrag > 0f) (offsetX.value / maxDrag).coerceIn(0f, 1f) else 0f
+            val rightAlpha = if (isDragging) (1f - connectFraction).coerceIn(0f, 1f) else 1f
+            val rightShift = if (isDragging) connectFraction * 40f else hintShift * 0.6f
+            Row(
+                modifier = Modifier
+                    .align(Alignment.CenterEnd)
+                    .padding(end = 24.dp)
+                    .graphicsLayer { translationX = rightShift; alpha = rightAlpha },
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                repeat(3) { idx ->
+                    val alpha = 0.3f + ((dotPhase + idx * 0.33f) % 1f) * 0.7f
+                    Box(
+                        modifier = Modifier
+                            .padding(start = if (idx == 0) 0.dp else 3.dp)
+                            .size(6.dp)
+                            .clip(CircleShape)
+                            .background(Color.White.copy(alpha = alpha.coerceIn(0.3f, 1f)))
+                    )
+                }
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                    contentDescription = null,
+                    tint = Color.White.copy(alpha = 0.85f),
+                    modifier = Modifier.size(18.dp).padding(start = 4.dp)
+                )
+            }
+        }
+    }
+    }
+}
+
+@Composable
+fun IosConnectionModeSegmentedControl(
+    selectedMode: ConnectionMode,
+    onModeSelected: (ConnectionMode) -> Unit,
+    enabled: Boolean = true,
+    scaleFactor: Float = 1f
+) {
+    val strings = LocalAppStrings.current
+    val modes = listOf(
+        ConnectionMode.TUNNEL to strings.TUN_MODE,
+        ConnectionMode.SYSTEM_PROXY to strings.SYSTEM_PROXY,
+        ConnectionMode.PROXY_ONLY to strings.PROXY_ONLY
+    )
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(28.dp),
+        color = IosCardBg,
+        shadowElevation = 8.dp,
+        tonalElevation = 0.dp
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(IosCardBg)
+                .padding(4.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            modes.forEach { (mode, label) ->
+                val selected = mode == selectedMode
+                val bg by animateColorAsState(
+                    targetValue = if (selected) IosActiveBlue else Color.Transparent,
+                    animationSpec = tween(250), label = "modeBg"
+                )
+                val textColor by animateColorAsState(
+                    targetValue = if (selected) Color.White else IosSecondaryLabel,
+                    animationSpec = tween(250), label = "modeText"
+                )
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height((36 * scaleFactor).dp)
+                        .clip(RoundedCornerShape(50))
+                        .background(bg)
+                        .shadow(
+                            elevation = if (selected) 10.dp else 0.dp,
+                            shape = RoundedCornerShape(50),
+                            spotColor = IosActiveBlue.copy(alpha = 0.4f),
+                            ambientColor = IosActiveBlue.copy(alpha = 0.3f)
+                        )
+                        .clip(RoundedCornerShape(50))
+                        .clickable(enabled = enabled) { onModeSelected(mode) }
+                        .graphicsLayer { alpha = if (enabled || selected) 1f else 0.45f }
+                        .testTag("connection_mode_${mode.name}"),
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (selected) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(
+                                    Brush.verticalGradient(
+                                        listOf(
+                                            Color.White.copy(alpha = 0.22f),
+                                            Color.White.copy(alpha = 0.06f),
+                                            Color.Transparent
+                                        )
+                                    )
+                                )
+                        )
+                    }
+                    Text(
+                        text = label,
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = if (selected) FontWeight.ExtraBold else FontWeight.SemiBold,
+                        color = textColor,
+                        fontSize = (10 * scaleFactor).sp,
+                        letterSpacing = 0.3.sp,
+                        maxLines = 1
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun IosProtocolSegmentedControl(
+    selectedProtocol: AetherProtocol,
+    onProtocolSelected: (AetherProtocol) -> Unit,
+    enabled: Boolean = true,
+    allowedProtocols: Set<AetherProtocol>? = null,
+    scaleFactor: Float = 1f
+) {
+    Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(28.dp),
+            color = IosCardBg,
+            shadowElevation = 8.dp,
+            tonalElevation = 0.dp
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(IosCardBg)
+                    .padding(4.dp),
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                AetherProtocol.entries.forEach { proto ->
+                    val selected = proto == selectedProtocol
+                    val itemEnabled = enabled && (allowedProtocols == null || proto in allowedProtocols)
+                    val bg by animateColorAsState(
+                        targetValue = if (selected) IosActiveBlue else Color.Transparent,
+                        animationSpec = tween(250), label = "protoBg"
+                    )
+                    val textColor by animateColorAsState(
+                        targetValue = if (selected) Color.White else IosSecondaryLabel,
+                        animationSpec = tween(250), label = "protoText"
+                    )
+                    val label = if (proto == AetherProtocol.ZERO_TRUST) "Z-TRUST" else proto.displayName.split(" ")[0].uppercase()
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .height((36 * scaleFactor).dp)
+                            .clip(RoundedCornerShape(50))
+                            .background(bg)
+                            .shadow(
+                                elevation = if (selected) 10.dp else 0.dp,
+                                shape = RoundedCornerShape(50),
+                                spotColor = IosActiveBlue.copy(alpha = 0.4f),
+                                ambientColor = IosActiveBlue.copy(alpha = 0.3f)
+                            )
+                            .clip(RoundedCornerShape(50))
+                            .clickable(enabled = itemEnabled) { onProtocolSelected(proto) }
+                            .graphicsLayer { alpha = if (itemEnabled || selected) 1f else 0.45f }
+                            .testTag("protocol_${proto.rawValue}"),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (selected) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(
+                                        Brush.verticalGradient(
+                                            listOf(
+                                                Color.White.copy(alpha = 0.22f),
+                                                Color.White.copy(alpha = 0.06f),
+                                                Color.Transparent
+                                            )
+                                        )
+                                    )
+                            )
+                        }
+                        Text(
+                            text = label,
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = if (selected) FontWeight.ExtraBold else FontWeight.SemiBold,
+                            color = textColor,
+                            fontSize = (10 * scaleFactor).sp,
+                            letterSpacing = 0.3.sp,
+                            maxLines = 1
+                        )
+                    }
+                }
+            }
+        }
+}
+
+private fun formatTime(seconds: Long): String {
+    val h = seconds / 3600
+    val m = (seconds % 3600) / 60
+    val s = seconds % 60
+    
+    fun pad(n: Long) = if (n < 10) "0$n" else n.toString()
+    return "${pad(h)}:${pad(m)}:${pad(s)}"
+}
+
+private fun formatTrafficBytes(bytes: Long): String {
+    val safeBytes = bytes.coerceAtLeast(0).coerceAtMost(9_000_000_000_000_000L)
+    val units = arrayOf("B", "KB", "MB", "GB", "TB", "PB")
+    var value = safeBytes.toDouble()
+    var unitIndex = 0
+    while (value >= 1024.0 && unitIndex < units.lastIndex) {
+        value /= 1024.0
+        unitIndex += 1
+    }
+    val roundedValue = (value * 100).toLong() / 100.0
+    return if (unitIndex == 0) {
+        "$safeBytes ${units[unitIndex]}"
+    } else {
+        val formatted = if (roundedValue >= 100) "${roundedValue.toLong()}" else "$roundedValue"
+        "$formatted ${units[unitIndex]}"
+    }
+}
+
+private fun formatSpeedValue(bytesPerSec: Double): String {
+    return when {
+        bytesPerSec >= 1024.0 * 1024.0 * 1024.0 * 1024.0 -> "${"%.1f".format(bytesPerSec / (1024.0 * 1024.0 * 1024.0 * 1024.0))} TB/s"
+        bytesPerSec >= 1024.0 * 1024.0 * 1024.0 -> "${"%.1f".format(bytesPerSec / (1024.0 * 1024.0 * 1024.0))} GB/s"
+        bytesPerSec >= 1024.0 * 1024.0 -> "${"%.1f".format(bytesPerSec / (1024.0 * 1024.0))} MB/s"
+        bytesPerSec >= 1024.0 -> "${"%.0f".format(bytesPerSec / 1024.0)} KB/s"
+        else -> "${"%.0f".format(bytesPerSec)} B/s"
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
 private fun PsiphonOptionsSheet(
     config: AetherConfig,
     onUpdateConfig: (AetherConfig) -> Unit,

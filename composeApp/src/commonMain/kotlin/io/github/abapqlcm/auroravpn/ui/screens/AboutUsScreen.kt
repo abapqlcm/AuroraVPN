@@ -11,7 +11,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
@@ -24,15 +23,9 @@ import io.github.abapqlcm.auroravpn.shared.i18n.LocalAppStrings
 import io.github.abapqlcm.auroravpn.shared.ui.components.IosActionRow
 import io.github.abapqlcm.auroravpn.shared.ui.components.SectionCard
 import io.github.abapqlcm.auroravpn.shared.ui.components.AppDivider
-import io.github.abapqlcm.auroravpn.shared.ui.components.GoldHeaderBar
-import io.github.abapqlcm.auroravpn.shared.ui.components.GlassCard
-import androidx.compose.foundation.border
 import io.github.abapqlcm.auroravpn.shared.ui.theme.AppPalette
 import io.github.abapqlcm.auroravpn.shared.ui.theme.appColors
 
-private val Gold = Color(0xFFD4AF37)
-private val GoldOutline = Color(0xFFD4AF37).copy(alpha = 0.22f)
-private val GoldDivider = Color(0xFFD4AF37).copy(alpha = 0.18f)
 private val IosActiveBlue = AppPalette.accent
 private val IosActiveGreen = AppPalette.statusConnected
 private val IosPurple = AppPalette.accentVariant
@@ -41,7 +34,7 @@ private const val UserGithubUrl = "https://github.com/abapqlcm"
 private const val AetherRepositoryUrl = "https://github.com/CluvexStudio/Aether"
 private const val HevRepositoryUrl = "https://github.com/heiher/hev-socks5-tunnel"
 private const val PsiphonRepositoryUrl = "https://github.com/Psiphon-Labs/psiphon-tunnel-core"
-private const val DeveloperTelegramUrl = "https://t.me/iprez"
+private const val DeveloperTelegramUrl = "https://t.me/PowerSigma"
 
 @Composable
 fun AboutUsScreen(
@@ -134,7 +127,7 @@ fun AboutUsScreen(
                     IosActionRow(
                         iconBg = IosActiveBlue.copy(alpha = 0.16f),
                         title = strings.ABOUT_LINK_MAINTAINER,
-                        subtitle = "t.me/iprez",
+                        subtitle = "github.com/abapqlcm",
                         onClick = { uriHandler.openUri(UserGithubUrl) }
                     )
                     AppDivider()
@@ -175,14 +168,31 @@ fun AboutUsScreen(
 @Composable
 private fun AboutHero(appVersion: String) {
     val strings = LocalAppStrings.current
-    GoldHeaderBar(title = strings.ABOUT_TITLE, subtitle = strings.ABOUT_SUBTITLE)
-    Spacer(Modifier.height(12.dp))
-    Row(
+    val colors = appColors()
+    Column(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.Center,
-        verticalAlignment = Alignment.CenterVertically
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(
+            text = strings.ABOUT_TITLE,
+            style = MaterialTheme.typography.headlineMedium,
+            fontWeight = FontWeight.Bold,
+            color = colors.textPrimary,
+            fontSize = 30.sp
+        )
+        Spacer(Modifier.height(6.dp))
+        Text(
+            text = strings.ABOUT_SUBTITLE,
+            style = MaterialTheme.typography.bodyMedium,
+            color = colors.textSecondary,
+            fontSize = 14.sp,
+            textAlign = TextAlign.Center
+        )
+        Spacer(Modifier.height(18.dp))
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             VersionChip(label = strings.ABOUT_VERSION_APP, value = appVersion)
             VersionChip(label = strings.ABOUT_VERSION_AETHER, value = "1.9.0")
             VersionChip(label = strings.ABOUT_VERSION_HEV, value = "2.17.1")
@@ -196,7 +206,7 @@ private fun VersionChip(label: String, value: String) {
     Surface(
         shape = RoundedCornerShape(10.dp),
         color = colors.surfaceRaised,
-        border = BorderStroke(0.6.dp, GoldOutline)
+        border = BorderStroke(0.5.dp, colors.divider)
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
@@ -249,11 +259,15 @@ private fun InfoRow(title: String, description: String) {
 
 @Composable
 private fun SectionTitle(text: String) {
-    Row(modifier = Modifier.padding(bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-        Box(modifier = Modifier.size(7.dp).clip(CircleShape).background(Gold))
-        Spacer(modifier = Modifier.width(8.dp))
-        Text(text = text.uppercase(), style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, color = Gold, letterSpacing = 0.9.sp)
-    }
+    val colors = appColors()
+    Text(
+        text = text.uppercase(),
+        style = MaterialTheme.typography.labelMedium,
+        fontWeight = FontWeight.SemiBold,
+        color = colors.textSecondary,
+        letterSpacing = 0.5.sp,
+        modifier = Modifier.padding(bottom = 8.dp)
+    )
 }
 
 @Composable
