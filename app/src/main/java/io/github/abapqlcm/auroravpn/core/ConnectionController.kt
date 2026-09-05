@@ -123,7 +123,10 @@ class ConnectionController private constructor(context: Context) : ConnectionCon
     override suspend fun start() {
         val attemptId: Long
         mutex.withLock {
-            if (_status.value == ConnectionStatus.RUNNING || _status.value == ConnectionStatus.VALIDATING) return
+            // BUGFIX-G: also block duplicate start while STARTING/RECONNECTING/STOPPING in flight
+            if (_status.value == ConnectionStatus.RUNNING || _status.value == ConnectionStatus.VALIDATING
+                || _status.value == ConnectionStatus.STARTING || _status.value == ConnectionStatus.RECONNECTING
+                || _status.value == ConnectionStatus.STOPPING) return
             attemptId = System.currentTimeMillis()
             activeAttemptId.set(attemptId)
             notifyStatusChanged(appContext, ConnectionStatus.STARTING)
@@ -159,6 +162,34 @@ class ConnectionController private constructor(context: Context) : ConnectionCon
             val rawRx = TrafficStats.getUidRxBytes(Process.myUid())
             baseTx = if (rawTx == TrafficStats.UNSUPPORTED.toLong() || rawTx < 0) 0L else rawTx
             baseRx = if (rawRx == TrafficStats.UNSUPPORTED.toLong() || rawRx < 0) 0L else rawRx
+            // BUGFIX: guard empty upstream BEFORE any branching — prevents aether --peer "" + probe timeout.
+            // Previous psiphon-only guard at line ~718 was dead code (inside else when !psiphonSupported but checked psiphonEnabled).
+            val noUpstream = effectiveConfig.peer.isBlank() && effectiveConfig.wgPeer.isBlank() && effectiveConfig.teamName.isBlank()
+            if (noUpstream) {
+                if (effectiveConfig.psiphonEnabled) {
+                    LogRepository.i("[Controller] No upstream (peer/team/wg empty) — Psiphon-only direct, skipping aether core")
+                    psiphonChaining = false
+                    runNativeBounded<Unit>(30000L, "Psiphon.direct") { PsiphonController.start(appContext, effectiveConfig, upstream = null) }
+                    if (!PsiphonController.isConnected()) {
+                        var w = 0; while (w < 30 && !PsiphonController.isConnected()) { delay(1000.milliseconds); w++ }
+                    }
+                    if (PsiphonController.isConnected() && PsiphonController.stableFor(5000)) {
+                        ActiveProxyProvider.psiphonProxyUrl = PsiphonController.getUpstreamProxy()
+                        LogRepository.i("[Controller] Psiphon direct ready at ${ActiveProxyProvider.psiphonProxyUrl} — establishing TUN")
+                        // Ensure VpnService can route TUN via Psiphon; start timer and mark RUNNING (VpnService observes RUNNING)
+                        startTimer()
+                        notifyStatusChanged(appContext, ConnectionStatus.RUNNING)
+                        return
+                    } else {
+                        LogRepository.e("[Controller] Psiphon direct failed with no upstream — aborting (would have hit probe Read timed out)")
+                        ActiveProxyProvider.psiphonProxyUrl = null
+                        runCatching { PsiphonController.stop() }
+                        throw IllegalStateException("No upstream and Psiphon direct failed — cannot start tunnel")
+                    }
+                } else {
+                    throw IllegalStateException("No upstream configured (peer/wgPeer/teamName blank) and Psiphon disabled — aborting to avoid probe timeout")
+                }
+            }
             if (psiphonSupported) {
                 psiphonChaining = true
                 if (effectiveConfig.protocol == AetherProtocol.MASQUE) {
@@ -716,27 +747,8 @@ class ConnectionController private constructor(context: Context) : ConnectionCon
                     }
                 }
             } else {
-                val noUpstream = effectiveConfig.peer.isBlank() && effectiveConfig.wgPeer.isBlank() && effectiveConfig.teamName.isBlank()
-                if (noUpstream && effectiveConfig.psiphonEnabled) {
-                    LogRepository.i("[Controller] No upstream (peer/team/wg empty) — running Psiphon-only direct VPN")
-                    runNativeBounded<Unit>(30000L, "Psiphon.direct") { PsiphonController.start(appContext, effectiveConfig, upstream = null) }
-                    if (!PsiphonController.isConnected()) {
-                        var w=0; while(w<30 && !PsiphonController.isConnected()){ kotlinx.coroutines.delay(1000); w++ }
-                    }
-                    if (PsiphonController.isConnected()) {
-                        ActiveProxyProvider.psiphonProxyUrl = PsiphonController.getUpstreamProxy()
-                        LogRepository.i("[Controller] Psiphon direct ready at ${ActiveProxyProvider.psiphonProxyUrl} — skipping aether core, establishing TUN via Psiphon")
-                        // Establish a lightweight TUN that routes via Psiphon SOCKS (handled by VpnService via ActiveProxyProvider)
-                        // Signal VpnService to bring up TUN against Psiphon endpoint by faking a successful aether start
-                        notifyStatusChanged(appContext, io.github.abapqlcm.auroravpn.shared.model.ConnectionStatus.RUNNING)
-                        return
-                    } else {
-                        LogRepository.w("[Controller] Psiphon direct failed, falling back to aether (will error if still no peer)")
-                        if (!startAetherInternal(effectiveConfig, bindAddress, attemptId)) {
-                            throw IllegalStateException("Core failed direct (no peer and Psiphon also failed)")
-                        }
-                    }
-                } else if (!startAetherInternal(effectiveConfig, bindAddress, attemptId)) {
+                // Old psiphon-only guard moved to top-of-start guard; keep direct-only path simple
+                if (!startAetherInternal(effectiveConfig, bindAddress, attemptId)) {
                     throw IllegalStateException("Core failed direct")
                 }
             }
@@ -824,18 +836,28 @@ class ConnectionController private constructor(context: Context) : ConnectionCon
     }
 
     override suspend fun stop() {
+        val attemptId: Long
+        val alreadyStopped: Boolean
         mutex.withLock {
-            if (_status.value == ConnectionStatus.STOPPED) {
-                stopTimer()
-                ActiveProxyProvider.psiphonProxyUrl = null
-                return@withLock
+            alreadyStopped = _status.value == ConnectionStatus.STOPPED
+            if (alreadyStopped) {
+                // Idempotent: ensure full teardown even if racing start; drain attemptId and channel
+                attemptId = activeAttemptId.get()
+            } else {
+                psiphonChaining = false
+                attemptId = activeAttemptId.get()
+                notifyStatusChanged(appContext, ConnectionStatus.STOPPING)
             }
-
-        psiphonChaining = false
-        val attemptId = activeAttemptId.get()
-        notifyStatusChanged(appContext, ConnectionStatus.STOPPING)
+        }
+        if (alreadyStopped) {
+            // Ensure STOPPED idempotency does the same cleanup as normal stop (runner, channel, timer)
+            stopTimer()
+            ActiveProxyProvider.psiphonProxyUrl = null
+            runCatching { withTimeoutOrNull(2000.milliseconds) { cleanup(attemptId) } }
+            // Keep status STOPPED (already is)
+            return
+        }
         LogRepository.i("[Controller] Stopping core")
-
         try {
             withTimeoutOrNull(10000.milliseconds) {
                 withContext(Dispatchers.IO) {
@@ -853,7 +875,6 @@ class ConnectionController private constructor(context: Context) : ConnectionCon
             runCatching { withTimeoutOrNull(2000.milliseconds) { cleanup(attemptId) } }
             notifyStatusChanged(appContext, ConnectionStatus.STOPPED)
             LogRepository.i("[Controller] Core stopped")
-        }
         }
     }
 
@@ -958,7 +979,14 @@ class ConnectionController private constructor(context: Context) : ConnectionCon
                         current
                     }
                 }
-                ConnectionStatus.DATAPLANE_VALIDATED -> current
+                ConnectionStatus.DATAPLANE_VALIDATED -> {
+                    // Runner emitted DATAPLANE_VALIDATED (e.g. GOOL inner validated) — propagate to VALIDATING/RUNNING
+                    // so startAetherInternal wait loop can proceed and UI shows progress.
+                    if (current == ConnectionStatus.VALIDATING || current == ConnectionStatus.STARTING) {
+                        LogRepository.i("[Controller] DATAPLANE_VALIDATED from core during $current -> VALIDATING")
+                        ConnectionStatus.VALIDATING
+                    } else current
+                }
                 ConnectionStatus.RUNNING -> {
                     if (current != ConnectionStatus.RUNNING) {
                         if (current == ConnectionStatus.RECONNECTING) resumeTimer() else startTimer()
