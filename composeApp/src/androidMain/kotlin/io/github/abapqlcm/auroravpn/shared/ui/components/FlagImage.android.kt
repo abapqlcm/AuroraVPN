@@ -88,7 +88,7 @@ private fun readSvgBytesFromAssets(
     countryCode: String
 ): ByteArray? {
     return try {
-        val assetPath = "composeResources/aetherst_tunnel.composeapp.generated.resources/drawable/${countryCode.lowercase()}.svg"
+        val assetPath = "composeResources/auroravpn_tunnel.composeapp.generated.resources/drawable/${countryCode.lowercase()}.svg"
         context.assets.open(assetPath).use { input ->
             val output = ByteArrayOutputStream()
             val buffer = ByteArray(1024)

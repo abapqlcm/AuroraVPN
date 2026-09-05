@@ -1,10 +1,10 @@
 package io.github.abapqlcm.auroravpn.shared.ui.theme
 
-import aetherst_tunnel.composeapp.generated.resources.Inter_Bold
-import aetherst_tunnel.composeapp.generated.resources.Inter_Regular
-import aetherst_tunnel.composeapp.generated.resources.Res
-import aetherst_tunnel.composeapp.generated.resources.Vazirmatn_Bold
-import aetherst_tunnel.composeapp.generated.resources.Vazirmatn_Regular
+import auroravpn_tunnel.composeapp.generated.resources.Inter_Bold
+import auroravpn_tunnel.composeapp.generated.resources.Inter_Regular
+import auroravpn_tunnel.composeapp.generated.resources.Res
+import auroravpn_tunnel.composeapp.generated.resources.Vazirmatn_Bold
+import auroravpn_tunnel.composeapp.generated.resources.Vazirmatn_Regular
 import androidx.compose.material3.Typography
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.text.font.FontFamily
