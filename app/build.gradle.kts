@@ -15,8 +15,8 @@ android {
     applicationId = "io.github.abapqlcm.auroravpn"
     minSdk = 26
     targetSdk = 36
-    versionCode = 13
-    versionName = "1.1.6-fix"
+    versionCode = 14
+    versionName = "1.1.7-fix"
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
