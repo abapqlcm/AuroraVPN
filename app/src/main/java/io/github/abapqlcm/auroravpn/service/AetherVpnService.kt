@@ -406,10 +406,15 @@ class AetherVpnService : VpnService() {
                     if (needPsiphonBootstrap) {
                         LogRepository.i("[VpnService] No upstream peer - bootstrapping Psiphon before HEV (psiphon-only mode)")
                         val started = try {
-                            PsiphonController.start(this@AetherVpnService, config, upstream = null)
-                            var w = 0
-                            while (w < 30 && !PsiphonController.isConnected()) { kotlinx.coroutines.delay(1000); w++ }
-                            PsiphonController.isConnected()
+                            // Bound the Psiphon start (can block on native init) + wait for connected
+                            val ok = withTimeoutOrNull(30000) {
+                                withContext(Dispatchers.IO) { PsiphonController.start(this@AetherVpnService, config, upstream = null) }
+                            } ?: false
+                            if (ok) {
+                                var w = 0
+                                while (w < 30 && !PsiphonController.isConnected()) { kotlinx.coroutines.delay(1000); w++ }
+                                PsiphonController.isConnected()
+                            } else false
                         } catch (_: Exception) { false }
                         if (started) {
                             ActiveProxyProvider.psiphonProxyUrl = PsiphonController.getUpstreamProxy()
@@ -1158,6 +1163,7 @@ class AetherVpnService : VpnService() {
         runCatching { if (wakeLock?.isHeld == true) wakeLock?.release() }
         wakeLock = null
         runCatching { PsiphonController.stop() }
+        PsiphonController.clearVpnService()
         ActiveProxyProvider.psiphonProxyUrl = null
         val manager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
         manager.cancel(NOTIFICATION_ID)

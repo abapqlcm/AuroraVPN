@@ -34,14 +34,18 @@ object PsiphonController {
     }
 
     private fun findFreePort(): Int {
-        // Bind on 127.0.0.1 explicitly to avoid IPv6-only 0.0.0.0 ambiguity on Android, and verify we can actually bind
+        // Bind on 127.0.0.1 explicitly to avoid IPv6-only 0.0.0.0 ambiguity.
+        // Note: this is TOCTOU — port is closed immediately and Psiphon rebinds.
+        // We mitigate by returning 0 if find fails, letting Psiphon pick any free port via onListening callback.
         return try {
             java.net.ServerSocket().use { s ->
                 s.reuseAddress = true
                 s.bind(java.net.InetSocketAddress("127.0.0.1", 0))
-                s.localPort
+                val p = s.localPort
+                // Keep socket a bit? No — rely on Psiphon callback. If collision after close, Psiphon will retry via callback.
+                p
             }
-        } catch (_: Exception) { 3080 }
+        } catch (_: Exception) { 0 }
     }
 
     fun start(context: Context, config: AetherConfig, upstream: String? = null): Boolean {
@@ -52,8 +56,13 @@ object PsiphonController {
             val requested = config.psiphonSocksPort.toIntOrNull() ?: 3080
             val socksPortInt = config.socksPort.toIntOrNull() ?: -1
             val httpPortInt = config.httpPort.toIntOrNull() ?: -1
-            val port = if (requested == socksPortInt || requested == httpPortInt) findFreePort() else requested
-            psiphonPort = port
+            // If requested collides with core proxy ports, ask Psiphon to pick free port (0) and rely on onListening callback
+            val port = if (requested == socksPortInt || requested == httpPortInt) {
+                val free = findFreePort()
+                if (free == 0) 0 else free
+            } else requested
+            // If free==0 we still set provisional 3080; real port arrives via onListeningSocksProxyPort
+            psiphonPort = if (port == 0) 3080 else port
             try {
                 val clazz = Class.forName("ca.psiphon.PsiphonTunnel")
                 val hostServiceClass = Class.forName("ca.psiphon.PsiphonTunnel\$HostService")
@@ -162,6 +171,11 @@ object PsiphonController {
         }
     }
 
+    fun clearVpnService() {
+        vpnServiceRef?.clear()
+        vpnServiceRef = null
+    }
+
     fun stop() {
         if (!running) return
         try {
@@ -175,8 +189,8 @@ object PsiphonController {
         tunnelObj = null
         running = false
         connected = false
-        vpnServiceRef?.clear()
-        vpnServiceRef = null
+        // Keep vpnServiceRef for next start within same VpnService lifetime.
+        // Only VpnService.onDestroy should call clearVpnService().
         LogRepository.i("Psiphon stopped", "Psiphon")
     }
 
