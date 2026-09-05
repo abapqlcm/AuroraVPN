@@ -479,7 +479,8 @@ class AetherProcessRunner(private val context: Context) {
                 if (dataPlaneOk) {
                     updateState(ConnectionStatus.SOCKS_READY, attemptId)
                 } else {
-                    LogRepository.i("[AetherCore] socks listening before data-plane validation; deferring SOCKS_READY", "AetherCore")
+                    // defer; ConnectionController polls probeSocksReady anyway, but mark readiness for early bridge
+                    LogRepository.i("[AetherCore] socks listening before data-plane validation; deferring SOCKS_READY (dataPlaneOk=false)", "AetherCore")
                 }
             }
 

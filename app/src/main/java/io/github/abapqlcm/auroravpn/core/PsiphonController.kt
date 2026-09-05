@@ -93,18 +93,24 @@ object PsiphonController {
                                 false
                             }
                             if (!ok) LogRepository.e("Psiphon bindToDevice: protect(fd=$fd) failed; routing loop may persist", "Psiphon")
-                            null
+                            // HostService.bindToDevice expects boolean -> return true/false not null
+                            ok
                         }
+                        "getNetworkType" -> "WIFI"
+                        "getDeviceRegion" -> "IR"
                         else -> null
                     }
                 }
                 val newTunnel = clazz.getMethod("newPsiphonTunnel", hostServiceClass).invoke(null, hostService)
                 tunnelObj = newTunnel
+                // setVpnMode must be invoked BEFORE startTunneling (otherwise routing loop on some Psiphon builds)
+                runCatching {
+                    val setVpnMode = clazz.getMethod("setVpnMode", Boolean::class.javaPrimitiveType)
+                    setVpnMode.invoke(newTunnel, false)
+                }
                 val serverEntries = try { context.assets.open("server_entries.txt").bufferedReader().readText().trim() } catch (_: Exception) { "" }
                 val startMethod = clazz.getMethod("startTunneling", String::class.java)
                 startMethod.invoke(newTunnel, serverEntries)
-                val setVpnMode = try { clazz.getMethod("setVpnMode", Boolean::class.javaPrimitiveType) } catch (_: Exception) { null }
-                setVpnMode?.invoke(newTunnel, false)
                 running = true
                 LogRepository.i("Psiphon started on 127.0.0.1:$psiphonPort", "Psiphon")
                 true
