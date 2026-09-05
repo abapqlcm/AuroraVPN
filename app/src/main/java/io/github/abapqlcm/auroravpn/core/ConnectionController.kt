@@ -989,32 +989,38 @@ class ConnectionController private constructor(context: Context) : ConnectionCon
     }
 
     private suspend fun probeSocksReady(host: String, port: Int): Boolean {
-        return withContext(Dispatchers.IO) {
-            runCatching {
-                Socket().use { socket ->
-                    socket.tcpNoDelay = true
-                    socket.connect(InetSocketAddress(host, port), 3000)
-                    socket.soTimeout = 6000
-                    val ins = socket.getInputStream()
-                    val out = socket.getOutputStream()
-                    out.write(byteArrayOf(5, 1, 0))
-                    out.flush()
-                    val method = ByteArray(2)
-                    if (!fillStream(ins, method)) return@runCatching false
-                    if (method[0] != 5.toByte() || method[1] != 0.toByte()) return@runCatching false
-                    val addr = InetAddress.getByName("1.1.1.1").address
-                    val req = ByteArray(5 + 4 + 2)
-                    req[0] = 5; req[1] = 1; req[2] = 0; req[3] = 1
-                    System.arraycopy(addr, 0, req, 4, 4)
-                    req[8] = (80 shr 8).toByte(); req[9] = 80.toByte()
-                    out.write(req)
-                    out.flush()
-                    val hdr = ByteArray(4)
-                    if (!fillStream(ins, hdr)) return@runCatching false
-                    hdr[1].toInt() and 0xFF == 0
-                }
-            }.getOrDefault(false)
+        // Outer retry: tolerate one transient Read timed out / connect failure (e.g. slow uplink in IR)
+        repeat(2) { attempt ->
+            val ok = withContext(Dispatchers.IO) {
+                runCatching {
+                    Socket().use { socket ->
+                        socket.tcpNoDelay = true
+                        socket.connect(InetSocketAddress(host, port), 5000)
+                        socket.soTimeout = 10000
+                        val ins = socket.getInputStream()
+                        val out = socket.getOutputStream()
+                        out.write(byteArrayOf(5, 1, 0))
+                        out.flush()
+                        val method = ByteArray(2)
+                        if (!fillStream(ins, method)) return@runCatching false
+                        if (method[0] != 5.toByte() || method[1] != 0.toByte()) return@runCatching false
+                        val addr = InetAddress.getByName("1.1.1.1").address
+                        val req = ByteArray(5 + 4 + 2)
+                        req[0] = 5; req[1] = 1; req[2] = 0; req[3] = 1
+                        System.arraycopy(addr, 0, req, 4, 4)
+                        req[8] = (80 shr 8).toByte(); req[9] = 80.toByte()
+                        out.write(req)
+                        out.flush()
+                        val hdr = ByteArray(4)
+                        if (!fillStream(ins, hdr)) return@runCatching false
+                        hdr[1].toInt() and 0xFF == 0
+                    }
+                }.getOrDefault(false)
+            }
+            if (ok) return true
+            if (attempt == 0) kotlinx.coroutines.delay(700)
         }
+        return false
     }
 
     private fun fillStream(ins: java.io.InputStream, buffer: ByteArray): Boolean {
