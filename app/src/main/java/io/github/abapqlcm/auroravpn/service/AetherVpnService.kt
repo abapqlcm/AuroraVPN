@@ -340,6 +340,8 @@ class AetherVpnService : VpnService() {
                 stateMutex.withLock {
                     hevEngine?.requestStop()
                     hevEngine = null
+                    runCatching { PsiphonController.stop() }
+                    ActiveProxyProvider.psiphonProxyUrl = null
                     socksBridge?.stop()
                     socksBridge = null
                     closeVpnInterface(attemptId)
@@ -475,7 +477,7 @@ class AetherVpnService : VpnService() {
                         socksPort = bridgePort,
                         mtu = config.mtu.coerceIn(576, 9000),
                         blockedPackagesProvider = { if (config.tunnelAllApps) emptySet() else config.blockedPackages },
-                        routingEngine = routingEngine!!
+                        routingEngine = checkNotNull(routingEngine) { "RoutingEngine not initialized" }
                     ).apply { start() }
                     lastBridgeUpstream = "$bridgeHost:$bridgePort"
                 }
@@ -713,6 +715,8 @@ class AetherVpnService : VpnService() {
     }
 
     private suspend fun cleanupResources(attemptId: Long, forceTeardown: Boolean = false) {
+        runCatching { PsiphonController.stop() }
+        ActiveProxyProvider.psiphonProxyUrl = null
         val status = ConnectionController.status.value
         val pauseOnly = !forceTeardown && !isUserInitiatedStop &&
                 (status == ConnectionStatus.RECONNECTING || status == ConnectionStatus.DATAPLANE_VALIDATED || status == ConnectionStatus.SOCKS_READY)
@@ -1123,6 +1127,8 @@ class AetherVpnService : VpnService() {
         unregisterNetworkMonitor()
         runCatching { if (wakeLock?.isHeld == true) wakeLock?.release() }
         wakeLock = null
+        runCatching { PsiphonController.stop() }
+        ActiveProxyProvider.psiphonProxyUrl = null
         val manager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
         manager.cancel(NOTIFICATION_ID)
         stopForeground(STOP_FOREGROUND_REMOVE)
