@@ -94,7 +94,7 @@ fun main(args: Array<String> = emptyArray()) {
         try { System.err.println(line) } catch (_: Throwable) {}
         try { System.out.println(line) } catch (_: Throwable) {}
         for (path in listOf(
-            File(System.getProperty("java.io.tmpdir"), "AuroraVPN/aetherst-boot.log"),
+            File(System.getProperty("java.io.tmpdir"), "AuroraVPN/auroravpn-boot.log"),
             File(System.getProperty("user.home"), "AuroraVPN-boot.log"),
             File("C:/Temp/AuroraVPN-boot.log")
         )) {
@@ -111,7 +111,7 @@ fun main(args: Array<String> = emptyArray()) {
         try {
             System.err.println("DesktopLogger init failed: ${e.message}")
             e.printStackTrace()
-            File(System.getProperty("java.io.tmpdir"), "AuroraVPN/aetherst-boot.log")
+            File(System.getProperty("java.io.tmpdir"), "AuroraVPN/auroravpn-boot.log")
                 .appendText("[BOOT] DesktopLogger init failed: ${e.stackTraceToString().take(2000)}\n")
         } catch (_: Throwable) {}
     }
@@ -140,7 +140,7 @@ fun main(args: Array<String> = emptyArray()) {
             val crashFile = File(System.getProperty("java.io.tmpdir"), "last_crash.log")
             crashFile.writeText(e.stackTraceToString().take(8000))
             try {
-                File(System.getProperty("java.io.tmpdir"), "AuroraVPN/aetherst-boot.log")
+                File(System.getProperty("java.io.tmpdir"), "AuroraVPN/auroravpn-boot.log")
                     .appendText("[UNCAUGHT] $concise\n")
             } catch (_: Throwable) {}
         } catch (_: Throwable) {
@@ -154,7 +154,7 @@ fun main(args: Array<String> = emptyArray()) {
     try { NetworkHealer.heal() } catch (e: Throwable) {
         try {
             io.github.abapqlcm.auroravpn.shared.desktop.DesktopLogger.e("Main", "NetworkHealer failed: ${e.message}")
-            File(System.getProperty("java.io.tmpdir"), "AuroraVPN/aetherst-boot.log").appendText("[BOOT] NetworkHealer failed: ${e.stackTraceToString().take(2000)}\n")
+            File(System.getProperty("java.io.tmpdir"), "AuroraVPN/auroravpn-boot.log").appendText("[BOOT] NetworkHealer failed: ${e.stackTraceToString().take(2000)}\n")
         } catch (_: Throwable) {}
     }
 
@@ -653,9 +653,9 @@ fun main(args: Array<String> = emptyArray()) {
             System.err.println("[BOOT] Compose application crashed: ${e.message}")
             e.printStackTrace()
             io.github.abapqlcm.auroravpn.shared.desktop.DesktopLogger.e("Main", "Compose application crashed: ${e.stackTraceToString().take(4000)}")
-            File(System.getProperty("java.io.tmpdir"), "AuroraVPN/aetherst-boot.log").appendText("[BOOT] Compose crash: ${e.stackTraceToString().take(4000)}\n")
+            File(System.getProperty("java.io.tmpdir"), "AuroraVPN/auroravpn-boot.log").appendText("[BOOT] Compose crash: ${e.stackTraceToString().take(4000)}\n")
             File(System.getProperty("java.io.tmpdir"), "last_crash.log").writeText(e.stackTraceToString().take(8000))
-            javax.swing.JOptionPane.showMessageDialog(null, "AuroraVPN failed to start:\n${e.message}\n\nLog: ${io.github.abapqlcm.auroravpn.shared.desktop.DesktopLogger.getLogFilePath()}\nBoot log: ${System.getProperty("java.io.tmpdir")}/AuroraVPN/aetherst-boot.log", "AuroraVPN Error", javax.swing.JOptionPane.ERROR_MESSAGE)
+            javax.swing.JOptionPane.showMessageDialog(null, "AuroraVPN failed to start:\n${e.message}\n\nLog: ${io.github.abapqlcm.auroravpn.shared.desktop.DesktopLogger.getLogFilePath()}\nBoot log: ${System.getProperty("java.io.tmpdir")}/AuroraVPN/auroravpn-boot.log", "AuroraVPN Error", javax.swing.JOptionPane.ERROR_MESSAGE)
         } catch (_: Throwable) {}
         throw e
     }

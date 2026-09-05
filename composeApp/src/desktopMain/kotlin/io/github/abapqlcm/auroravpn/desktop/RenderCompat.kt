@@ -303,7 +303,7 @@ object RenderCompat {
     private fun log(msg: String) {
         try { DesktopLogger.i("RenderCompat", msg) } catch (_: Throwable) {}
         try {
-            File(System.getProperty("java.io.tmpdir"), "AuroraVPN/aetherst-boot.log")
+            File(System.getProperty("java.io.tmpdir"), "AuroraVPN/auroravpn-boot.log")
                 .appendText("[RENDER] $msg\n")
         } catch (_: Throwable) {}
     }

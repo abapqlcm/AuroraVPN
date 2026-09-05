@@ -29,7 +29,7 @@ object DesktopLogger {
                 val baseDir = resolveBaseDir()
                 val logsDir = File(baseDir, "logs")
                 logsDir.mkdirs()
-                primary = File(logsDir, "aetherst.log")
+                primary = File(logsDir, "auroravpn.log")
                 if (!primary.exists()) primary.createNewFile()
                 if (primary.length() > 0) {
                     try {
@@ -49,7 +49,7 @@ object DesktopLogger {
             try {
                 val tmp = File(System.getProperty("java.io.tmpdir"), "AuroraVPN")
                 tmp.mkdirs()
-                fallback = File(tmp, "aetherst-boot.log")
+                fallback = File(tmp, "auroravpn-boot.log")
                 if (!fallback.exists()) fallback.createNewFile()
                 fallbackFile = fallback
             } catch (_: Exception) {}
@@ -117,8 +117,8 @@ object DesktopLogger {
         try {
             if (!file.exists() || file.length() < MAX_FILE_SIZE_BYTES) return
             for (i in MAX_ROTATED_FILES downTo 1) {
-                val src = if (i == 1) file else File(file.parentFile, "aetherst.log.${i - 1}")
-                val dst = File(file.parentFile, "aetherst.log.$i")
+                val src = if (i == 1) file else File(file.parentFile, "auroravpn.log.${i - 1}")
+                val dst = File(file.parentFile, "auroravpn.log.$i")
                 if (src.exists()) {
                     if (dst.exists()) dst.delete()
                     src.renameTo(dst)
@@ -142,7 +142,7 @@ object DesktopLogger {
             if (!appData.isNullOrBlank()) File(appData, "AuroraVPN-Tunnel")
             else File(System.getProperty("user.home"), "AuroraVPN-Tunnel")
         } else {
-            File(System.getProperty("user.home"), ".aetherst")
+            File(System.getProperty("user.home"), ".auroravpn")
         }
     }
 

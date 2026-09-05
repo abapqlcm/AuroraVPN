@@ -397,6 +397,26 @@ class AetherVpnService : VpnService() {
                 if (effectiveEngine == TunnelEngine.HEV_TUN2SOCKS) {
                     if (!HevTun2SocksNative.isAvailable) throw IllegalStateException("HEV Native library not available")
 
+                    // Psiphon-only bootstrap: when no upstream peer/team is configured but Psiphon is enabled,
+                    // pre-start Psiphon so HEV has a valid SOCKS upstream (127.0.0.1:3080-ish).
+                    val noUpstream = config.peer.isBlank() && config.wgPeer.isBlank() && config.teamName.isBlank()
+                    val needPsiphonBootstrap = noUpstream && config.psiphonEnabled && ActiveProxyProvider.psiphonProxyUrl == null
+                    if (needPsiphonBootstrap) {
+                        LogRepository.i("[VpnService] No upstream peer - bootstrapping Psiphon before HEV (psiphon-only mode)")
+                        val started = try {
+                            PsiphonController.start(this@AetherVpnService, config, upstream = null)
+                            var w = 0
+                            while (w < 30 && !PsiphonController.isConnected()) { kotlinx.coroutines.delay(1000); w++ }
+                            PsiphonController.isConnected()
+                        } catch (_: Exception) { false }
+                        if (started) {
+                            ActiveProxyProvider.psiphonProxyUrl = PsiphonController.getUpstreamProxy()
+                            LogRepository.i("[VpnService] Psiphon bootstrap ready at ${ActiveProxyProvider.psiphonProxyUrl}")
+                        } else {
+                            LogRepository.w("[VpnService] Psiphon bootstrap failed - HEV will attempt direct (may fail without peer)")
+                        }
+                    }
+
                     hevEngine = HevTun2SocksEngine()
 
                     val hevSettings = HevEngineSettings(
@@ -421,8 +441,30 @@ class AetherVpnService : VpnService() {
                         settings = hevSettings,
                         udpMode = config.hevUdpMode
                     ) == true
-                    if (!ok) throw IllegalStateException("HEV engine failed to start mtu=${config.mtu}")
-                    lastHevUpstream = "$hevHost:$hevPort"
+                    if (!ok) {
+                        val psiphonUrl = ActiveProxyProvider.psiphonProxyUrl
+                        if (noUpstream && psiphonUrl != null) {
+                            val (retryHost, retryPort) = resolveEffectiveSocks(config, psiphonUrl)
+                            if (retryHost != hevHost || retryPort != hevPort) {
+                                LogRepository.w("[VpnService] HEV first try failed ($hevHost:$hevPort), retrying via Psiphon $retryHost:$retryPort")
+                                hevEngine?.requestStop()
+                                val retryEngine = HevTun2SocksEngine()
+                                val retryOk = retryEngine.start(descriptor, retryHost, retryPort, config.mtu.coerceIn(576, 9000), attemptId, hevSettings, config.hevUdpMode)
+                                if (retryOk) {
+                                    hevEngine = retryEngine
+                                    lastHevUpstream = "$retryHost:$retryPort"
+                                } else {
+                                    throw IllegalStateException("HEV engine failed to start mtu=${config.mtu} (also retry via Psiphon $retryHost:$retryPort failed)")
+                                }
+                            } else {
+                                throw IllegalStateException("HEV engine failed to start mtu=${config.mtu}")
+                            }
+                        } else {
+                            throw IllegalStateException("HEV engine failed to start mtu=${config.mtu}")
+                        }
+                    } else {
+                        lastHevUpstream = "$hevHost:$hevPort"
+                    }
                 } else {
                     val psiphonUrl = ActiveProxyProvider.psiphonProxyUrl
                     val (bridgeHost, bridgePort) = resolveEffectiveSocks(config, psiphonUrl)
@@ -444,13 +486,18 @@ class AetherVpnService : VpnService() {
                 }
                 ensureCurrentAttempt(attemptId)
 
-                val socksPort = config.socksPort.toIntOrNull() ?: 1819
-                runCatching {
-                    val domainCode = probeCoreSocks5(config.socksHost, socksPort, domainTarget = "www.cloudflare.com", ipLiteralTarget = null)
-                    val ipCode = probeCoreSocks5(config.socksHost, socksPort, domainTarget = null, ipLiteralTarget = "1.1.1.1")
-                    LogRepository.i("[VpnService] Core proxy probe: domain-reply=$domainCode ip-literal-reply=$ipCode (0x00=granted)")
-                }.onFailure {
-                    LogRepository.e("[VpnService] Core proxy probe failed: ${it.localizedMessage}")
+                val noUpstreamProbe = config.peer.isBlank() && config.wgPeer.isBlank() && config.teamName.isBlank()
+                if (noUpstreamProbe && ActiveProxyProvider.psiphonProxyUrl != null) {
+                    LogRepository.i("[VpnService] Core proxy probe skipped (psiphon-only mode, HEV routes via Psiphon SOCKS)")
+                } else {
+                    val socksPort2 = config.socksPort.toIntOrNull() ?: 1819
+                    runCatching {
+                        val domainCode = probeCoreSocks5(config.socksHost, socksPort2, domainTarget = "www.cloudflare.com", ipLiteralTarget = null)
+                        val ipCode = probeCoreSocks5(config.socksHost, socksPort2, domainTarget = null, ipLiteralTarget = "1.1.1.1")
+                        LogRepository.i("[VpnService] Core proxy probe: domain-reply=$domainCode ip-literal-reply=$ipCode (0x00=granted)")
+                    }.onFailure {
+                        LogRepository.e("[VpnService] Core proxy probe failed: ${it.localizedMessage}")
+                    }
                 }
 
                 LogRepository.i("[VpnService] VPN tunnel active")
@@ -837,10 +884,15 @@ class AetherVpnService : VpnService() {
     }
 
     private fun resolveEffectiveSocks(config: io.github.abapqlcm.auroravpn.shared.model.AetherConfig, psiphonUrl: String?): Pair<String, Int> {
-        val isPsiphon = psiphonUrl?.contains("3080") == true || config.upstreamProxy.contains("3080")
-        val host = if (isPsiphon) "127.0.0.1" else config.socksHost
-        val port = if (isPsiphon) 3080 else config.socksPort.toIntOrNull() ?: 1819
-        return host to port
+        fun parsePsiphonPort(url: String?): Int? = try {
+            val after = url?.substringAfter("127.0.0.1:") ?: url?.substringAfter("localhost:") ?: return null
+            after.substringBefore("/").substringBefore("?").trim().toIntOrNull()
+        } catch (_: Exception) { null }
+        val psiphonPort = parsePsiphonPort(psiphonUrl) ?: parsePsiphonPort(config.upstreamProxy)
+        if (psiphonPort != null) return "127.0.0.1" to psiphonPort
+        val isPsiphonLegacy = psiphonUrl?.contains("socks5://") == true || config.upstreamProxy.contains("socks5://127.0.0.1")
+        if (isPsiphonLegacy) return "127.0.0.1" to 3080
+        return config.socksHost to (config.socksPort.toIntOrNull() ?: 1819)
     }
 
     private fun closeVpnInterface(attemptId: Long) {
