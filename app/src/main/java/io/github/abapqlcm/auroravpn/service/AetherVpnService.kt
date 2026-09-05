@@ -896,8 +896,8 @@ class AetherVpnService : VpnService() {
         }
         try {
             socket.tcpNoDelay = true
-            socket.connect(InetSocketAddress(socksHost, socksPort), 3000)
-            socket.soTimeout = 6000
+            socket.connect(InetSocketAddress(socksHost, socksPort), 5000)
+            socket.soTimeout = 10000
             val ins = socket.getInputStream()
             val out = socket.getOutputStream()
 

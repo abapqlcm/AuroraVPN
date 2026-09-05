@@ -1,5 +1,5 @@
 {
-  "name": "aetherst-tunnel",
+  "name": "auroravpn-tunnel",
   "version": "1.0.0",
   "description": "<p align=\"center\">\r   <img src=\"https://img.shields.io/badge/AuroraVPN-Tunnel-007AFF?style=for-the-badge&logo=shield&logoColor=white\" alt=\"AuroraVPN Logo\" width=\"200\">\r </p>",
   "main": "index.js",

@@ -34,7 +34,7 @@ private const val UserGithubUrl = "https://github.com/abapqlcm"
 private const val AetherRepositoryUrl = "https://github.com/CluvexStudio/Aether"
 private const val HevRepositoryUrl = "https://github.com/heiher/hev-socks5-tunnel"
 private const val PsiphonRepositoryUrl = "https://github.com/Psiphon-Labs/psiphon-tunnel-core"
-private const val DeveloperTelegramUrl = "https://t.me/PowerSigma"
+private const val DeveloperTelegramUrl = "https://t.me/iprez"
 
 @Composable
 fun AboutUsScreen(
