@@ -111,19 +111,37 @@ class HevTun2SocksEngine {
                 }
                 engineJob = localEngineJob
                 scope.launch {
-                    delay(800.milliseconds)
+                    delay(1100.milliseconds)
                     if (!started.isCompleted) {
-                        val running = localEngineJob?.isActive == true && currentAttemptId.get() == attemptId
+                        val jobActive = localEngineJob?.isActive == true && currentAttemptId.get() == attemptId
+                        val notFailed = _state.value != State.FAILED && _state.value != State.STOPPED
+                        val running = jobActive && notFailed
                         if (running) {
                             _state.value = State.RUNNING
                             startStatsPolling(attemptId)
-                            LogRepository.i("[Hev] [attempt=$attemptId] Engine status: ACTIVE")
+                            LogRepository.i("[Hev] [attempt=$attemptId] Engine status: ACTIVE (optimistic 1100ms)")
+                        } else {
+                            LogRepository.w("[Hev] [attempt=$attemptId] Engine not active after 1100ms (active=$jobActive state=${_state.value})")
                         }
                         started.complete(running)
                     }
                 }
             }
-            return withTimeoutOrNull(3.seconds) { started.await() } ?: false
+            val res = withTimeoutOrNull(5.seconds) { started.await() }
+            if (res == null) {
+                LogRepository.w("[Hev] [attempt=$attemptId] Start timed out after 5s (no verdict) — triggering nativeStop to avoid active-leak")
+                stopping.set(true)
+                runCatching { HevTun2SocksNative.nativeStop() }
+                withTimeoutOrNull(3.seconds) { localEngineJob?.join() }
+                // active will be cleared in engineJob finally; if job already done, clear here
+                if (localEngineJob?.isActive != true) {
+                    closeDuplicatedFd(attemptId)
+                    active.set(false)
+                    stopStatsPolling()
+                }
+                return false
+            }
+            return res
         } catch (cancellation: CancellationException) {
             stopping.set(true)
             _state.value = State.STOPPING
