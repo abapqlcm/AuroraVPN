@@ -34,8 +34,13 @@ object PsiphonController {
     }
 
     private fun findFreePort(): Int {
+        // Bind on 127.0.0.1 explicitly to avoid IPv6-only 0.0.0.0 ambiguity on Android, and verify we can actually bind
         return try {
-            ServerSocket(0).use { it.localPort }
+            java.net.ServerSocket().use { s ->
+                s.reuseAddress = true
+                s.bind(java.net.InetSocketAddress("127.0.0.1", 0))
+                s.localPort
+            }
         } catch (_: Exception) { 3080 }
     }
 
@@ -45,7 +50,9 @@ object PsiphonController {
             val dir = File(context.filesDir, "psiphon")
             if (!dir.exists()) dir.mkdirs()
             val requested = config.psiphonSocksPort.toIntOrNull() ?: 3080
-            val port = if (requested.toString() == config.socksPort) findFreePort() else requested
+            val socksPortInt = config.socksPort.toIntOrNull() ?: -1
+            val httpPortInt = config.httpPort.toIntOrNull() ?: -1
+            val port = if (requested == socksPortInt || requested == httpPortInt) findFreePort() else requested
             psiphonPort = port
             try {
                 val clazz = Class.forName("ca.psiphon.PsiphonTunnel")

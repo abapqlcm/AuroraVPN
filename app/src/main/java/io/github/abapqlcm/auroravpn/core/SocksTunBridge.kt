@@ -95,7 +95,8 @@ class SocksTunBridge(
     private companion object {
         private const val UDP_IDLE_SHORT = 60000L
         private const val UDP_IDLE_VOIP = 180000L
-        private fun isVoipPort(port: Int) = port in 3478..3480 || port >= 1024
+        // 3478-3480 STUN/TURN, 5004-5005 RTP, 16384-32767 typical RTP range — previous `port>=1024` leaked every UDP to 180s
+        private fun isVoipPort(port: Int) = port in 3478..3480 || port in 5004..5005 || port in 16384..32767
     }
     private val executor = ThreadPoolExecutor(
         0, 64,

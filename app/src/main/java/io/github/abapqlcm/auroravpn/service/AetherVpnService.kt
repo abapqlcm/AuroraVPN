@@ -570,6 +570,10 @@ class AetherVpnService : VpnService() {
                 } catch (e: Exception) {
                     LogRepository.w("[Tun] Failed to disallow self: ${e.message}")
                 }
+                // Previous code enumerated ALL installed apps and called addDisallowedApplication() per-package
+                // — on devices with 300+ apps this hits Binder/builder limits and stalls establishVpnTun.
+                // Caps to 250 packages; full bypass is already achieved via RoutingEngine+0.0.0.0/0 route,
+                // the disallowed list is just best-effort. If we hit the limit we proceed anyway.
                 try {
                     val pm = packageManager
                     val allPkgs = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -578,7 +582,9 @@ class AetherVpnService : VpnService() {
                         @Suppress("DEPRECATION") pm.getInstalledApplications(PackageManager.GET_META_DATA)
                     }
                     var disallowed = 0
+                    var capped = false
                     for (app in allPkgs) {
+                        if (disallowed >= 250) { capped = true; break }
                         val pkg = app.packageName
                         if (pkg == packageName) continue
                         try {
@@ -586,10 +592,15 @@ class AetherVpnService : VpnService() {
                             disallowed++
                         } catch (_: PackageManager.NameNotFoundException) {
                         } catch (e: Exception) {
+                            // Binder limit reached — stop adding, proceed with current TUN config
+                            if (e.message?.contains("TransactionTooLarge") == true || e.message?.contains("too many") == true) {
+                                LogRepository.w("[Tun] Binder limit on addDisallowedApplication at $disallowed: ${e.message}")
+                                capped = true; break
+                            }
                             LogRepository.w("[Tun] Skipping disallow $pkg: ${e.message}")
                         }
                     }
-                    LogRepository.i("[Tun] Bypass-default: 0 tunneled, $disallowed apps bypassed (all bypass)")
+                    LogRepository.i("[Tun] Bypass-default: 0 tunneled, $disallowed apps bypassed${if (capped) " (capped 250)" else ""} (all bypass)")
                 } catch (e: Exception) {
                     LogRepository.w("[Tun] Failed to enumerate apps for all-bypass: ${e.message}")
                 }
