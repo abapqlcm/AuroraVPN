@@ -133,7 +133,7 @@ class AetherVpnService : VpnService() {
         createNotificationChannel()
         
         val pm = getSystemService(POWER_SERVICE) as PowerManager
-        wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "AuroraVPN:VpnWakeLock")
+        wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "AuroraVPN:VpnWakeLock").apply { setReferenceCounted(false) }
 
         scope.launch {
             ConnectionController.status.collect { status ->
@@ -204,7 +204,7 @@ class AetherVpnService : VpnService() {
                 getController().markReconnecting()
             } catch (e: Exception) {
                 LogRepository.w("[VpnService] markReconnecting failed: ${e.message}")
-                Bridge.statusOverride.value = ConnectionStatus.RECONNECTING
+                Bridge.mutableStatus().value = ConnectionStatus.RECONNECTING
             }
         }
     }
@@ -330,6 +330,8 @@ class AetherVpnService : VpnService() {
     override fun onRevoke() {
         super.onRevoke()
         isUserInitiatedStop = false
+        autoReconnectJob?.cancel()
+        autoReconnectJob = null
         LogRepository.w("[VpnService] VPN revoked by system or other app")
         val config = AetherConfigRepository.getInstance(getSettings(PlatformContext(this))).config.value
         val attemptId = activeAttemptId.getAndSet(0)
@@ -349,6 +351,7 @@ class AetherVpnService : VpnService() {
                 }
             }
         }
+        runCatching { if (wakeLock?.isHeld == true) wakeLock?.release() }
         scope.launch {
             if (config.connectionMode != ConnectionMode.PROXY_ONLY) {
                 getController().stop()
@@ -734,11 +737,15 @@ class AetherVpnService : VpnService() {
     }
 
     private suspend fun cleanupResources(attemptId: Long, forceTeardown: Boolean = false) {
-        runCatching { PsiphonController.stop() }
-        ActiveProxyProvider.psiphonProxyUrl = null
         val status = ConnectionController.status.value
         val pauseOnly = !forceTeardown && !isUserInitiatedStop &&
                 (status == ConnectionStatus.RECONNECTING || status == ConnectionStatus.DATAPLANE_VALIDATED || status == ConnectionStatus.SOCKS_READY)
+        if (!pauseOnly) {
+            runCatching { PsiphonController.stop() }
+            ActiveProxyProvider.psiphonProxyUrl = null
+        } else {
+            LogRepository.i("[VpnService] cleanupResources pauseOnly: keeping Psiphon alive at ${ActiveProxyProvider.psiphonProxyUrl}, wakeLock held=${wakeLock?.isHeld == true}")
+        }
         stateMutex.withLock {
             if (pauseOnly) {
                 LogRepository.i("[VpnService] Reconnect in progress; pausing TUN instead of tearing down")
@@ -754,8 +761,8 @@ class AetherVpnService : VpnService() {
                 lastHevUpstream = null
                 lastBridgeUpstream = null
                 DnsMap.clear()
+                runCatching { if (wakeLock?.isHeld == true) wakeLock?.release() }
             }
-            runCatching { if (wakeLock?.isHeld == true) wakeLock?.release() }
         }
     }
 

@@ -66,6 +66,7 @@ interface Settings {
     fun putInt(key: String, value: Int)
     fun getStringSet(key: String, defaultValue: Set<String>): Set<String>
     fun putStringSet(key: String, value: Set<String>)
+    fun contains(key: String): Boolean
 }
 
 expect fun getVpnController(context: PlatformContext): VpnController

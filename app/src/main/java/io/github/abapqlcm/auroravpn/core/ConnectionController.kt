@@ -81,7 +81,7 @@ class ConnectionController private constructor(context: Context) : ConnectionCon
         private fun notifyStatusChanged(context: Context, newStatus: ConnectionStatus) {
             lastKnownStatus = newStatus
             _status.value = newStatus
-            Bridge.statusOverride.value = newStatus
+            Bridge.mutableStatus().value = newStatus
             val intent = Intent(ACTION_STATUS_CHANGED)
             intent.putExtra("status", newStatus.name)
             intent.setPackage(context.packageName)
@@ -96,7 +96,7 @@ class ConnectionController private constructor(context: Context) : ConnectionCon
 
         fun updateIsWaitingForCode(waiting: Boolean) {
             _isWaitingForCode.value = waiting
-            Bridge.isWaitingForCode.value = waiting
+            Bridge.mutableWaiting().value = waiting
         }
     }
 
@@ -1081,7 +1081,7 @@ class ConnectionController private constructor(context: Context) : ConnectionCon
             while (isActive) {
                 delay(1000.milliseconds)
                 durationSeconds++
-                Bridge.elapsedOverride.value = durationSeconds
+                Bridge.mutableElapsed().value = durationSeconds
                 if (useTrafficStatsFallback && !hasManualTraffic) {
                     updateTrafficFromStats()
                 }
@@ -1100,7 +1100,7 @@ class ConnectionController private constructor(context: Context) : ConnectionCon
             while (isActive) {
                 delay(1000.milliseconds)
                 durationSeconds++
-                Bridge.elapsedOverride.value = durationSeconds
+                Bridge.mutableElapsed().value = durationSeconds
                 if (useTrafficStatsFallback && !hasManualTraffic) {
                     updateTrafficFromStats()
                 }
@@ -1112,8 +1112,8 @@ class ConnectionController private constructor(context: Context) : ConnectionCon
         timerJob?.cancel()
         timerJob = null
         durationSeconds = 0L
-        Bridge.elapsedOverride.value = 0L
-        Bridge.trafficOverride.value = SessionTraffic()
+        Bridge.mutableElapsed().value = 0L
+        Bridge.mutableTraffic().value = SessionTraffic()
         hasManualTraffic = false
         accumulatedTx = 0L
         accumulatedRx = 0L
@@ -1137,7 +1137,7 @@ class ConnectionController private constructor(context: Context) : ConnectionCon
         val downloadSpeed = (diffRx - prevTotalRx).coerceAtLeast(0).toDouble()
         prevTotalTx = diffTx
         prevTotalRx = diffRx
-        Bridge.trafficOverride.value = SessionTraffic(diffTx, diffRx, uploadSpeed, downloadSpeed)
+        Bridge.mutableTraffic().value = SessionTraffic(diffTx, diffRx, uploadSpeed, downloadSpeed)
     }
 
     fun setTraffic(tx: Long, rx: Long) {
@@ -1152,7 +1152,7 @@ class ConnectionController private constructor(context: Context) : ConnectionCon
                 accumulatedRx = 0L
                 prevTotalTx = 0L
                 prevTotalRx = 0L
-                Bridge.trafficOverride.value = SessionTraffic(0, 0, 0.0, 0.0)
+                Bridge.mutableTraffic().value = SessionTraffic(0, 0, 0.0, 0.0)
                 return
             }
             hasManualTraffic = true
@@ -1169,6 +1169,6 @@ class ConnectionController private constructor(context: Context) : ConnectionCon
         val downloadSpeed = (totalRx - prevTotalRx).coerceAtLeast(0).toDouble()
         prevTotalTx = totalTx
         prevTotalRx = totalRx
-        Bridge.trafficOverride.value = SessionTraffic(totalTx, totalRx, uploadSpeed, downloadSpeed)
+        Bridge.mutableTraffic().value = SessionTraffic(totalTx, totalRx, uploadSpeed, downloadSpeed)
     }
 }

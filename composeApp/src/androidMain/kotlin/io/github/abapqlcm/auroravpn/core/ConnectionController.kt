@@ -69,8 +69,8 @@ actual object ConnectionController {
         if (status == ConnectionStatus.STOPPED || status == ConnectionStatus.ERROR || status == ConnectionStatus.FAILED) {
             _elapsedSeconds.value = 0L
             _sessionTraffic.value = SessionTraffic()
-            Bridge.elapsedOverride.value = 0L
-            Bridge.trafficOverride.value = SessionTraffic()
+            Bridge.mutableElapsed().value = 0L
+            Bridge.mutableTraffic().value = SessionTraffic()
         }
     }
 }

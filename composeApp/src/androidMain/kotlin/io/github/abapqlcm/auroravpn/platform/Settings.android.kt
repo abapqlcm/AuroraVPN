@@ -28,6 +28,8 @@ class AndroidSettings(context: Context) : Settings {
     override fun getStringSet(key: String, defaultValue: Set<String>): Set<String> =
         prefs.getStringSet(key, defaultValue) ?: defaultValue
 
+    override fun contains(key: String): Boolean = prefs.contains(key)
+
     override fun putStringSet(key: String, value: Set<String>) {
         prefs.edit {
             putStringSet(

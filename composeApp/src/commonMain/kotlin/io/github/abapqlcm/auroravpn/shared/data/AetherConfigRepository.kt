@@ -59,7 +59,7 @@ class AetherConfigRepository private constructor(private val settings: Settings)
         // Fresh install with no server yet: enable Psiphon so tap-Connect works like original AetherST
         // (original also needs this; user reports it connects directly without manual config)
         if (cfg.peer.isBlank() && cfg.wgPeer.isBlank() && cfg.teamName.isBlank() && !cfg.psiphonEnabled) {
-            val hasEverSetPsiphon = settings.getString("psiphon_enabled", "__unset__") != "__unset__"
+            val hasEverSetPsiphon = settings.contains("psiphon_enabled")
             if (!hasEverSetPsiphon) {
                 settings.putBoolean("psiphon_enabled", true)
                 return cfg.copy(psiphonEnabled = true)
