@@ -52,11 +52,6 @@ jobs:
           if [ -z "$KEY_PASSWORD" ]; then echo "KEY_PASSWORD=aether_password" >> $GITHUB_ENV; fi
 
       - name: Build Multi-APK with Gradle
-        env:
-          KEYSTORE_FILE: src/main/release.jks
-          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: ./gradlew assembleRelease
 
       - name: Organize & Rename APKs
