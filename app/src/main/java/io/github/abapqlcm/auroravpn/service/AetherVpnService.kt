@@ -909,7 +909,11 @@ class AetherVpnService : VpnService() {
         val psiphonPort = parsePsiphonPort(psiphonUrl) ?: parsePsiphonPort(config.upstreamProxy)
         if (psiphonPort != null) return "127.0.0.1" to psiphonPort
         val isPsiphonLegacy = psiphonUrl?.contains("socks5://") == true || config.upstreamProxy.contains("socks5://127.0.0.1")
-        if (isPsiphonLegacy) return "127.0.0.1" to 3080
+        if (isPsiphonLegacy) {
+            // Legacy psiphon URL without parseable port — try live Psiphon port before hardcoded fallback
+            val livePort = parsePsiphonPort(PsiphonController.getUpstreamProxy()) ?: 3080
+            return "127.0.0.1" to livePort
+        }
         return config.socksHost to (config.socksPort.toIntOrNull() ?: 1819)
     }
 

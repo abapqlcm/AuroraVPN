@@ -38,9 +38,9 @@ android {
   signingConfigs {
     create("release") {
       storeFile = if (System.getenv("KEYSTORE_FILE") != null) file(System.getenv("KEYSTORE_FILE")) else file("$rootDir/app/src/main/release.jks")
-      storePassword = System.getenv("KEYSTORE_PASSWORD") ?: "aether_password"
-      keyAlias = System.getenv("KEY_ALIAS") ?: "aether_key"
-      keyPassword = System.getenv("KEY_PASSWORD") ?: "aether_password"
+      storePassword = System.getenv("KEYSTORE_PASSWORD") ?: "auroravpn_password"
+      keyAlias = System.getenv("KEY_ALIAS") ?: "auroravpn_key"
+      keyPassword = System.getenv("KEY_PASSWORD") ?: "auroravpn_password"
       enableV1Signing = true
       enableV2Signing = true
       enableV3Signing = true
