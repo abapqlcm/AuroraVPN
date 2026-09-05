@@ -95,8 +95,8 @@ class SocksTunBridge(
     private companion object {
         private const val UDP_IDLE_SHORT = 60000L
         private const val UDP_IDLE_VOIP = 180000L
-        // 3478-3480 STUN/TURN, 5004-5005 RTP, 16384-32767 typical RTP range — previous `port>=1024` leaked every UDP to 180s
-        private fun isVoipPort(port: Int) = port in 3478..3480 || port in 5004..5005 || port in 16384..32767
+        // Only STUN/TURN (3478-3480) and RTP/RTCP signalling (5004-5005) keep 180s. Previous 16384..32767 kept ~16k ports at 180s -> UDP memory bloat.
+        private fun isVoipPort(port: Int) = port in 3478..3480 || port in 5004..5005
     }
     private val executor = ThreadPoolExecutor(
         0, 64,

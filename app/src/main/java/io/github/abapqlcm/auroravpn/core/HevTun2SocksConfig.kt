@@ -32,9 +32,10 @@ object HevTun2SocksConfig {
         when (udpMode.lowercase().trim()) {
             "udp" -> sb.append("  udp: 'udp'\n")
             "tcp" -> sb.append("  udp: 'tcp'\n")
-            "true", "icmp" -> sb.append("  udp: 'tcp'\n")
-            "off", "disable", "disabled", "none" -> { }
-            else -> sb.append("  udp: 'tcp'\n")
+            "true", "icmp" -> sb.append("  udp: 'udp'\n")
+            "off", "disable", "disabled", "none" -> { /* omit udp key -> udp_in_udp stays 0 */ }
+            "" -> sb.append("  udp: 'udp'\n")
+            else -> sb.append("  udp: 'udp'\n")
         }
 
         sb.append("\nmapdns:\n")

@@ -341,6 +341,9 @@ class AetherProcessRunner(private val context: Context) {
                             writer.newLine()
                             writer.flush()
                             LogRepository.d("Sent input to binary")
+                        } else {
+                            // inputProvider for zero-trust suspends on receive(); for non-zero-trust variants that return "" instantly we avoid busy-spin.
+                            delay(100.milliseconds)
                         }
                     }
                 } catch (_: CancellationException) {
@@ -348,6 +351,8 @@ class AetherProcessRunner(private val context: Context) {
                     if (currentCoroutineContext().isActive && currentAttemptId.get() == attemptId) {
                         LogRepository.w("Process input pipe closed: ${exception.localizedMessage}")
                     }
+                } finally {
+                    runCatching { writer.close() }
                 }
             }
 

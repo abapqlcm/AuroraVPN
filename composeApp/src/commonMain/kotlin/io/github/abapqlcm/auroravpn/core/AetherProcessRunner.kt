@@ -288,6 +288,8 @@ class AetherProcessRunner(private val context: PlatformContext) {
                     if (text.isNotEmpty()) {
                         proc.writeLine(text)
                         LogRepository.d("Sent input to binary")
+                    } else {
+                        delay(100.milliseconds)
                     }
                 }
             }
@@ -361,7 +363,10 @@ class AetherProcessRunner(private val context: PlatformContext) {
 
     private fun writeRoutingFile(config: AetherConfig): java.io.File? {
         val block = config.routingRules.filter { it.mode == RoutingMode.BLOCK }
-        if (block.isEmpty()) return null
+        if (block.isEmpty()) {
+            runCatching { java.io.File(systemUtils.getFilesDir(), "routing.ast").takeIf { it.exists() }?.delete() }
+            return null
+        }
 
         return try {
             val file = java.io.File(systemUtils.getFilesDir(), "routing.ast")
