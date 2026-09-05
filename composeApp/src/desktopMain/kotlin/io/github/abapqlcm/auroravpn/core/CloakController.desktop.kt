@@ -81,7 +81,7 @@ object CloakController {
                 val text = try { file.readText() } catch (_: Throwable) { continue }
                 regex.find(text)?.let { return it.value }
             }
-            val fallbackFiles = listOf(File(dir, "aether-masque.toml"), File(dir, "aether.toml"))
+            val fallbackFiles = listOf(File(dir, "aurora-masque.toml"), File(dir, "aether-masque.toml"), File(dir, "aether.toml"))
             for (file in fallbackFiles) {
                 if (!file.exists()) continue
                 val text = try { file.readText() } catch (_: Throwable) { continue }

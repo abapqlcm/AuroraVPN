@@ -96,7 +96,7 @@ object CloakController {
                 val match = regex.find(text)
                 if (match != null) return match.value
             }
-            val fallbackFiles = listOf(File(dir, "aether-masque.toml"), File(dir, "aether.toml"))
+            val fallbackFiles = listOf(File(dir, "aurora-masque.toml"), File(dir, "aether-masque.toml"), File(dir, "aether.toml"))
             for (file in fallbackFiles) {
                 if (!file.exists()) continue
                 val text = try { file.readText() } catch (e: Exception) {

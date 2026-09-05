@@ -61,6 +61,7 @@ class AetherConfigRepository private constructor(private val settings: Settings)
         if (cfg.peer.isBlank() && cfg.wgPeer.isBlank() && cfg.teamName.isBlank() && !cfg.psiphonEnabled) {
             val hasEverSetPsiphon = settings.getString("psiphon_enabled", "__unset__") != "__unset__"
             if (!hasEverSetPsiphon) {
+                settings.putBoolean("psiphon_enabled", true)
                 return cfg.copy(psiphonEnabled = true)
             }
         }
