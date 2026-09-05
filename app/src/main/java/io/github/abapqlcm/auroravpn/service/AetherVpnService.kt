@@ -943,62 +943,74 @@ class AetherVpnService : VpnService() {
     }
 
     private fun probeCoreSocks5(socksHost: String, socksPort: Int, domainTarget: String?, ipLiteralTarget: String?): Int {
-        val socket = Socket()
-        val isLoopback = socksHost == "127.0.0.1" || socksHost == "::1" || socksHost == "localhost"
-        if (!isLoopback) {
-            if (!protect(socket)) {
-                LogRepository.w("[VpnService] probe protect failed for $socksHost:$socksPort")
-            }
-        }
-        try {
-            socket.tcpNoDelay = true
-            socket.connect(InetSocketAddress(socksHost, socksPort), 5000)
-            socket.soTimeout = 10000
-            val ins = socket.getInputStream()
-            val out = socket.getOutputStream()
-
-            out.write(byteArrayOf(5, 1, 0))
-            out.flush()
-            val method = ByteArray(2)
-            if (!fillStream(ins, method)) return -255
-            if (method[0] != 5.toByte() || method[1] != 0.toByte()) return -254
-
-            val addrPart: ByteArray = if (domainTarget != null) {
-                val d = domainTarget.toByteArray()
-                val buf = ByteArray(1 + d.size)
-                buf[0] = d.size.toByte()
-                System.arraycopy(d, 0, buf, 1, d.size)
-                buf
-            } else {
-                InetAddress.getByName(requireNotNull(ipLiteralTarget)).address
-            }
-            val atyp: Byte = if (domainTarget != null) 3 else 1
-
-            val req = ByteArray(5 + addrPart.size + 2)
-            req[0] = 5
-            req[1] = 1
-            req[2] = 0
-            req[3] = atyp
-            System.arraycopy(addrPart, 0, req, 4, addrPart.size)
-            req[4 + addrPart.size] = (80 shr 8).toByte()
-            req[5 + addrPart.size] = 80.toByte()
-            out.write(req)
-            out.flush()
-
-            val hdr = ByteArray(4)
-            if (!fillStream(ins, hdr)) return -253
-            when (hdr[3].toInt() and 0xFF) {
-                1 -> if (!fillStream(ins, ByteArray(6))) return -252
-                4 -> if (!fillStream(ins, ByteArray(18))) return -252
-                3 -> {
-                    val len = ins.read()
-                    if (len <= 0 || !fillStream(ins, ByteArray(len + 2))) return -252
+        // Retry once on transient Read timed out / connect failure (IR slow uplinks)
+        var lastCode = -255
+        repeat(2) { attempt ->
+            val socket = Socket()
+            val isLoopback = socksHost == "127.0.0.1" || socksHost == "::1" || socksHost == "localhost"
+            if (!isLoopback) {
+                if (!protect(socket)) {
+                    LogRepository.w("[VpnService] probe protect failed for $socksHost:$socksPort")
                 }
             }
-            return hdr[1].toInt() and 0xFF
-        } finally {
-            runCatching { socket.close() }
+            try {
+                socket.tcpNoDelay = true
+                socket.connect(InetSocketAddress(socksHost, socksPort), 5000)
+                socket.soTimeout = 10000
+                val ins = socket.getInputStream()
+                val out = socket.getOutputStream()
+
+                out.write(byteArrayOf(5, 1, 0))
+                out.flush()
+                val method = ByteArray(2)
+                if (!fillStream(ins, method)) { lastCode = -255; if (attempt == 0) { Thread.sleep(700); return@repeat } else return lastCode }
+                if (method[0] != 5.toByte() || method[1] != 0.toByte()) { lastCode = -254; if (attempt == 0) { Thread.sleep(700); return@repeat } else return lastCode }
+
+                val addrPart: ByteArray = if (domainTarget != null) {
+                    val d = domainTarget.toByteArray()
+                    val buf = ByteArray(1 + d.size)
+                    buf[0] = d.size.toByte()
+                    System.arraycopy(d, 0, buf, 1, d.size)
+                    buf
+                } else {
+                    // Use static bytes to avoid DNS lookup on IP literal
+                    byteArrayOf(1, 1, 1, 1)
+                }
+                val atyp: Byte = if (domainTarget != null) 3 else 1
+
+                val req = ByteArray(5 + addrPart.size + 2)
+                req[0] = 5
+                req[1] = 1
+                req[2] = 0
+                req[3] = atyp
+                System.arraycopy(addrPart, 0, req, 4, addrPart.size)
+                req[4 + addrPart.size] = (80 shr 8).toByte()
+                req[5 + addrPart.size] = 80.toByte()
+                out.write(req)
+                out.flush()
+
+                val hdr = ByteArray(4)
+                if (!fillStream(ins, hdr)) { lastCode = -253; if (attempt == 0) { Thread.sleep(700); return@repeat } else return lastCode }
+                when (hdr[3].toInt() and 0xFF) {
+                    1 -> if (!fillStream(ins, ByteArray(6))) { lastCode = -252; if (attempt == 0) { Thread.sleep(700); return@repeat } else return lastCode }
+                    4 -> if (!fillStream(ins, ByteArray(18))) { lastCode = -252; if (attempt == 0) { Thread.sleep(700); return@repeat } else return lastCode }
+                    3 -> {
+                        val len = ins.read()
+                        if (len <= 0 || !fillStream(ins, ByteArray(len + 2))) { lastCode = -252; if (attempt == 0) { Thread.sleep(700); return@repeat } else return lastCode }
+                    }
+                }
+                return hdr[1].toInt() and 0xFF
+            } catch (e: Exception) {
+                lastCode = -253
+                LogRepository.w("[VpnService] probe attempt ${attempt + 1} failed: ${e.message}")
+                if (attempt == 0) {
+                    try { Thread.sleep(700) } catch (_: Exception) {}
+                }
+            } finally {
+                runCatching { socket.close() }
+            }
         }
+        return lastCode
     }
 
     private fun fillStream(ins: InputStream, buffer: ByteArray): Boolean {

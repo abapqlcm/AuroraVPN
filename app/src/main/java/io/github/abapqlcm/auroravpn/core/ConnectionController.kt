@@ -973,7 +973,8 @@ class ConnectionController private constructor(context: Context) : ConnectionCon
         return withContext(Dispatchers.IO) {
             runCatching {
                 Socket().use { socket ->
-                    socket.connect(InetSocketAddress(host, port), 1000)
+                    socket.tcpNoDelay = true
+                    socket.connect(InetSocketAddress(host, port), 2000)
                     true
                 }
             }.getOrDefault(false)
@@ -1005,7 +1006,8 @@ class ConnectionController private constructor(context: Context) : ConnectionCon
                         val method = ByteArray(2)
                         if (!fillStream(ins, method)) return@runCatching false
                         if (method[0] != 5.toByte() || method[1] != 0.toByte()) return@runCatching false
-                        val addr = InetAddress.getByName("1.1.1.1").address
+                        // Static 1.1.1.1 bytes — avoid InetAddress.getByName which may trigger DNS on some ROMs
+                        val addr = byteArrayOf(1, 1, 1, 1)
                         val req = ByteArray(5 + 4 + 2)
                         req[0] = 5; req[1] = 1; req[2] = 0; req[3] = 1
                         System.arraycopy(addr, 0, req, 4, 4)
