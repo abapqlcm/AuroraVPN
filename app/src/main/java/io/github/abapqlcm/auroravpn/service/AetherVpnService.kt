@@ -550,20 +550,23 @@ class AetherVpnService : VpnService() {
         } else {
             if (config.tunneledPackages.isNotEmpty()) {
                 var added = 0
-                config.tunneledPackages
-                    .asSequence()
-                    .filterNot { it == packageName }
-                    .forEach { pkg ->
-                        try {
-                            builder.addAllowedApplication(pkg)
-                            added++
-                        } catch (_: PackageManager.NameNotFoundException) {
-                            LogRepository.w("[Tun] Ignoring uninstalled package: $pkg")
-                        } catch (e: Exception) {
-                            LogRepository.w("[Tun] Skipping package $pkg: ${e.message}")
+                var capped = false
+                for (pkg in config.tunneledPackages.asSequence().filterNot { it == packageName }) {
+                    if (added >= 250) { capped = true; break }
+                    try {
+                        builder.addAllowedApplication(pkg)
+                        added++
+                    } catch (_: PackageManager.NameNotFoundException) {
+                        LogRepository.w("[Tun] Ignoring uninstalled package: $pkg")
+                    } catch (e: Exception) {
+                        if (e.message?.contains("TransactionTooLarge") == true || e.message?.contains("too many") == true) {
+                            LogRepository.w("[Tun] Binder limit on addAllowedApplication at $added: ${e.message}")
+                            capped = true; break
                         }
+                        LogRepository.w("[Tun] Skipping package $pkg: ${e.message}")
                     }
-                LogRepository.i("[Tun] Bypass-default: $added apps tunneled, rest bypass (allowed mode)")
+                }
+                LogRepository.i("[Tun] Bypass-default: $added apps tunneled, rest bypass (allowed mode)${if (capped) " (capped 250)" else ""}")
             } else {
                 try {
                     builder.addDisallowedApplication(packageName)

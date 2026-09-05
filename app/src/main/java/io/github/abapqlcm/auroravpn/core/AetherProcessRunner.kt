@@ -518,7 +518,10 @@ class AetherProcessRunner(private val context: Context) {
         val rules = config.routingRules
         val block = rules.filter { it.mode == RoutingMode.BLOCK }
 
-        if (block.isEmpty()) return null
+        if (block.isEmpty()) {
+            runCatching { java.io.File(context.filesDir, "routing.ast").takeIf { it.exists() }?.delete() }
+            return null
+        }
 
         return try {
             val file = java.io.File(context.filesDir, "routing.ast")
