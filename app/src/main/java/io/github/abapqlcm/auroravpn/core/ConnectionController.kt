@@ -716,8 +716,27 @@ class ConnectionController private constructor(context: Context) : ConnectionCon
                     }
                 }
             } else {
-                ActiveProxyProvider.psiphonProxyUrl = null
-                if (!startAetherInternal(effectiveConfig, bindAddress, attemptId)) {
+                val noUpstream = effectiveConfig.peer.isBlank() && effectiveConfig.wgPeer.isBlank() && effectiveConfig.teamName.isBlank()
+                if (noUpstream && effectiveConfig.psiphonEnabled) {
+                    LogRepository.i("[Controller] No upstream (peer/team/wg empty) — running Psiphon-only direct VPN")
+                    runNativeBounded<Unit>(30000L, "Psiphon.direct") { PsiphonController.start(appContext, effectiveConfig, upstream = null) }
+                    if (!PsiphonController.isConnected()) {
+                        var w=0; while(w<30 && !PsiphonController.isConnected()){ kotlinx.coroutines.delay(1000); w++ }
+                    }
+                    if (PsiphonController.isConnected()) {
+                        ActiveProxyProvider.psiphonProxyUrl = PsiphonController.getUpstreamProxy()
+                        LogRepository.i("[Controller] Psiphon direct ready at ${ActiveProxyProvider.psiphonProxyUrl} — skipping aether core, establishing TUN via Psiphon")
+                        // Establish a lightweight TUN that routes via Psiphon SOCKS (handled by VpnService via ActiveProxyProvider)
+                        // Signal VpnService to bring up TUN against Psiphon endpoint by faking a successful aether start
+                        notifyStatusChanged(appContext, io.github.abapqlcm.auroravpn.shared.model.ConnectionStatus.RUNNING)
+                        return
+                    } else {
+                        LogRepository.w("[Controller] Psiphon direct failed, falling back to aether (will error if still no peer)")
+                        if (!startAetherInternal(effectiveConfig, bindAddress, attemptId)) {
+                            throw IllegalStateException("Core failed direct (no peer and Psiphon also failed)")
+                        }
+                    }
+                } else if (!startAetherInternal(effectiveConfig, bindAddress, attemptId)) {
                     throw IllegalStateException("Core failed direct")
                 }
             }

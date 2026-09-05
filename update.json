@@ -1,7 +1,7 @@
 {
-  "version": "1.1.5-fix",
-  "version_code": 12,
+  "version": "1.1.6-fix",
+  "version_code": 13,
   "is_beta": false,
   "changelog": "fix HEV JNI path + new lux motion (Create by @iprez), remove telegram popup",
-  "release_url": "https://github.com/abapqlcm/AuroraVPN/releases/tag/v1.1.5-fix-android"
+  "release_url": "https://github.com/abapqlcm/AuroraVPN/releases/tag/v1.1.6-fix-android"
 }
