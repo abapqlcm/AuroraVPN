@@ -6,6 +6,7 @@ import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
@@ -103,10 +104,15 @@ import io.github.abapqlcm.auroravpn.shared.model.SpeedTestPhase
 import io.github.abapqlcm.auroravpn.shared.model.SpeedTestResult
 import io.github.abapqlcm.auroravpn.shared.model.SpeedTestServer
 import io.github.abapqlcm.auroravpn.shared.model.SpeedTestState
+import io.github.abapqlcm.auroravpn.shared.ui.components.GoldHeaderBar
+import io.github.abapqlcm.auroravpn.shared.ui.components.GlassCard
 import io.github.abapqlcm.auroravpn.shared.ui.theme.AppPalette
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
+private val Gold = Color(0xFFD4AF37)
+private val GoldOutline = Color(0xFFD4AF37).copy(alpha = 0.22f)
+private val GoldDivider = Color(0xFFD4AF37).copy(alpha = 0.18f)
 private val IosCardBg = AppPalette.surfaceRaised
 private val IosGroupBg = AppPalette.divider
 private val IosSecondaryLabel = AppPalette.textSecondary
@@ -190,6 +196,7 @@ fun SpeedTestScreen(
                 )
             }
         }
+        Box(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).height(1.dp).background(GoldDivider))
 
         LazyColumn(
             modifier = Modifier
@@ -225,8 +232,8 @@ fun SpeedTestScreen(
 
         AnimatedVisibility(
             visible = showGuide,
-            enter = fadeIn(tween(300)) + expandVertically(tween(300)),
-            exit = fadeOut(tween(200)) + shrinkVertically(tween(200))
+            enter = fadeIn(spring(stiffness = 320f)) + expandVertically(spring(stiffness = 320f)),
+            exit = fadeOut(spring(stiffness = 320f)) + shrinkVertically(spring(stiffness = 320f))
         ) {
             Box(
                 modifier = Modifier
@@ -448,13 +455,14 @@ private fun ServerUnavailableDialog(
 private fun SettingsPanel(config: SpeedTestConfig, onUpdate: (SpeedTestConfig) -> Unit) {
     val strings = LocalAppStrings.current
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().border(1.dp, GoldOutline, RoundedCornerShape(16.dp)),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = IosCardBg)
+        colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.06f))
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.Settings, null, tint = IosActiveBlue, modifier = Modifier.size(18.dp))
+                Box(modifier = Modifier.size(7.dp).clip(CircleShape).background(Gold)); Spacer(modifier = Modifier.width(8.dp))
+                Icon(Icons.Default.Settings, null, tint = Gold, modifier = Modifier.size(18.dp))
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(strings.SPEEDTEST_SETTINGS_TITLE, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
             }
@@ -803,8 +811,8 @@ private fun ProgressCard(state: SpeedTestState) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = IosCardBg),
-        border = BorderStroke(1.dp, phaseColor.copy(alpha = 0.3f))
+        colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.06f)),
+        border = BorderStroke(1.dp, GoldOutline)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(

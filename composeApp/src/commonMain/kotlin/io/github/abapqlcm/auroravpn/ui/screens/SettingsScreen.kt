@@ -1,6 +1,7 @@
 package io.github.abapqlcm.auroravpn.shared.ui.screens
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -96,6 +97,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalFocusManager
@@ -116,6 +118,9 @@ import io.github.abapqlcm.auroravpn.shared.model.AetherScanMode
 import io.github.abapqlcm.auroravpn.shared.model.ConnectionMode
 import io.github.abapqlcm.auroravpn.shared.model.TunnelEngine
 import io.github.abapqlcm.auroravpn.shared.ui.components.AppDivider
+import io.github.abapqlcm.auroravpn.shared.ui.components.GoldDotHeader
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.border
 import io.github.abapqlcm.auroravpn.shared.ui.components.IosActionRow
 import io.github.abapqlcm.auroravpn.shared.ui.components.IosConfirmationDialog
 import io.github.abapqlcm.auroravpn.shared.ui.components.IosGroupCard
@@ -128,6 +133,9 @@ import io.github.abapqlcm.auroravpn.shared.ui.components.IosSwitchRow
 import io.github.abapqlcm.auroravpn.shared.i18n.LocalAppStrings
 import io.github.abapqlcm.auroravpn.shared.ui.theme.AppPalette
 
+private val Gold = Color(0xFFD4AF37)
+private val GoldOutline = Color(0xFFD4AF37).copy(alpha = 0.22f)
+private val GoldDivider = Color(0xFFD4AF37).copy(alpha = 0.18f)
 private val IosCardBg = AppPalette.surfaceRaised
 private val IosGroupBg = AppPalette.divider
 private val IosSecondaryLabel = AppPalette.textSecondary
@@ -248,7 +256,7 @@ fun SettingsScreen(
 
 @Composable
 private fun CategoryCard(icon: ImageVector, iconBg: Color, title: String, subtitle: String, onClick: () -> Unit) {
-    Card(modifier = Modifier.fillMaxWidth().clickable { onClick() }, shape = RoundedCornerShape(14.dp), colors = CardDefaults.cardColors(containerColor = IosCardBg)) {
+    Card(modifier = Modifier.fillMaxWidth().border(1.dp, GoldOutline, RoundedCornerShape(16.dp)).clickable { onClick() }, shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = IosCardBg)) {
         Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 16.dp), verticalAlignment = Alignment.CenterVertically) {
             IosIconBadge(icon = icon, backgroundColor = iconBg)
             Spacer(modifier = Modifier.width(14.dp))
@@ -308,6 +316,8 @@ private fun SettingsSubPage(page: SettingsPage, config: AetherConfig, isBatteryO
 
 @Composable private fun PresetPage(config: AetherConfig, onApplyPreset: (String) -> Unit, onShowToast: (String, Boolean) -> Unit) {
     val strings = LocalAppStrings.current
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    GoldDotHeader(text = strings.CAT_CONFIGURATION_PROFILES)
     IosGroupCard { Column {
         IosPresetItem(icon = Icons.Default.Bolt, iconBg = AppPalette.statusScanning, title = strings.PRESETS_TURBO, subtitle = strings.PRESETS_TURBO_SUB, isActive = config.presetId == "turbo", onClick = { onApplyPreset("turbo"); onShowToast(strings.PRESETS_TURBO, false) })
         Row(modifier = Modifier.fillMaxWidth().padding(start = 58.dp, end = 16.dp, bottom = 10.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -332,10 +342,13 @@ private fun SettingsSubPage(page: SettingsPage, config: AetherConfig, isBatteryO
         }
         AppDivider(); IosPresetItem(icon = Icons.Default.Tune, iconBg = AppPalette.textSecondary, title = strings.PRESETS_CUSTOM, subtitle = strings.PRESETS_CUSTOM_SUB, isActive = config.presetId == "custom", onClick = { onApplyPreset("custom"); onShowToast(strings.PRESETS_CUSTOM, false) })
     } }
+    }
 }
 
 @Composable private fun ConnectionPage(config: AetherConfig, isAndroid: Boolean, onUpdateConfig: (AetherConfig) -> Unit, onUpdateTunnelEngine: (TunnelEngine) -> Unit, onOpenSplitTunneling: () -> Unit, onOpenRoutingRules: () -> Unit) {
     val strings = LocalAppStrings.current
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    GoldDotHeader(text = strings.CAT_CONNECTION_TUNNELING)
     IosGroupCard { Column {
         val opts = if (isAndroid) listOf(strings.TUN_MODE, strings.PROXY_ONLY) else if (isDesktop) listOf(strings.TUN_MODE_GLOBAL, strings.SYSTEM_PROXY, strings.PROXY_ONLY) else listOf(strings.TUN_MODE_GLOBAL, strings.SYSTEM_PROXY, strings.PROXY_ONLY)
         IosPickerRow(icon = Icons.Default.VpnLock, iconBg = AppPalette.statusConnected,             title = strings.CONNECTION_MODE, value = when (config.connectionMode) { ConnectionMode.TUNNEL -> if (isAndroid) strings.TUN_MODE else strings.TUN_MODE_GLOBAL; ConnectionMode.SYSTEM_PROXY -> strings.SYSTEM_PROXY; else -> strings.PROXY_ONLY }, options = opts, onOptionSelected = { val m = if (isAndroid) { if (it == 0) ConnectionMode.TUNNEL else ConnectionMode.PROXY_ONLY } else if (isDesktop) { when (it) { 0 -> ConnectionMode.TUNNEL; 1 -> ConnectionMode.SYSTEM_PROXY; else -> ConnectionMode.PROXY_ONLY } } else { when (it) { 0 -> ConnectionMode.TUNNEL; 1 -> ConnectionMode.SYSTEM_PROXY; else -> ConnectionMode.PROXY_ONLY } }; onUpdateConfig(config.copy(connectionMode = m)) })
@@ -349,10 +362,13 @@ private fun SettingsSubPage(page: SettingsPage, config: AetherConfig, isBatteryO
         IosPickerRow(icon = Icons.AutoMirrored.Filled.AltRoute, iconBg = IosActiveBlue, title = strings.DOMAIN_IP_ROUTING, value = "${config.routingRules.size} ${strings.ROUTING_RULES_TITLE}", options = emptyList(), onOptionSelected = {}, onClickOverride = onOpenRoutingRules)
         if (isAndroid) { AppDivider(); IosSwitchRow(icon = Icons.Default.Share, iconBg = AppPalette.accentVariantAlt, title = strings.SHARE_HOTSPOT, subtitle = strings.SHARE_HOTSPOT_SUB, checked = config.shareHotspot, onCheckedChange = { onUpdateConfig(config.copy(shareHotspot = it)) }, testTag = "switch_share_hotspot"); if (config.shareHotspot) HotspotInfo(config) }
     } }
+    }
 }
 
 @Composable private fun InterfacePage(config: AetherConfig, onUpdateConfig: (AetherConfig) -> Unit) {
     val strings = LocalAppStrings.current
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    GoldDotHeader(text = strings.CAT_USER_INTERFACE)
     IosGroupCard {
         IosPickerRow(
             icon = Icons.Default.TouchApp,
@@ -375,6 +391,7 @@ private fun SettingsSubPage(page: SettingsPage, config: AetherConfig, isBatteryO
             onOptionSelected = { idx -> onUpdateConfig(config.copy(appLanguage = langCodes[idx])) }
         )
     }
+    }
 }
 
 @Composable private fun HotspotInfo(config: AetherConfig) {
@@ -393,6 +410,7 @@ private fun SettingsSubPage(page: SettingsPage, config: AetherConfig, isBatteryO
 @Composable private fun ProtocolPage(config: AetherConfig, onUpdateConfig: (AetherConfig) -> Unit, onOptimizeMtu: () -> Unit, isOptimizingMtu: Boolean) {
     val strings = LocalAppStrings.current
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        GoldDotHeader(text = strings.CAT_PROTOCOL_TRANSPORT)
         IosGroupCard { Column {
             IosPickerRow(icon = Icons.Default.VpnLock, iconBg = IosActiveBlue, title = strings.TRANSPORT_PROTOCOL, value = config.protocol.displayName, options = AetherProtocol.entries.map { it.displayName }, onOptionSelected = { onUpdateConfig(config.copy(protocol = AetherProtocol.entries[it])) })
             if (config.protocol == AetherProtocol.MASQUE) { AppDivider(); IosSwitchRow(icon = Icons.Default.Http, iconBg = IosActiveBlue, title = strings.HTTP2_FALLBACK, subtitle = strings.HTTP2_FALLBACK_SUB, checked = config.h2Mode, onCheckedChange = { onUpdateConfig(config.copy(h2Mode = it)) }, testTag = "switch_h2_mode"); AppDivider(); IosSwitchRow(icon = Icons.Default.VerticalSplit, iconBg = AppPalette.accentVariant, title = strings.PACKET_FRAGMENTATION, subtitle = strings.PACKET_FRAGMENTATION_SUB, checked = config.h2Fragment, onCheckedChange = { onUpdateConfig(config.copy(h2Fragment = it)) }, testTag = "switch_fragment"); if (config.h2Fragment) { IosInputFieldRow(icon = Icons.Default.Straighten, iconBg = IosSecondaryLabel, label = strings.FRAGMENT_SIZE, value = config.fragmentSize, onValueChange = { onUpdateConfig(config.copy(fragmentSize = it)) }, placeholder = "16-32", testTag = "fragment_size_input"); AppDivider(); IosInputFieldRow(icon = Icons.Default.Timer, iconBg = IosSecondaryLabel, label = strings.FRAGMENT_DELAY, value = config.fragmentDelay, onValueChange = { onUpdateConfig(config.copy(fragmentDelay = it)) }, placeholder = "2-10", testTag = "fragment_delay_input"); AppDivider() }; IosSwitchRow(icon = Icons.Default.EnhancedEncryption, iconBg = IosActiveGreen, title = strings.ECH, subtitle = strings.ECH_SUB, checked = config.echEnabled, onCheckedChange = { onUpdateConfig(config.copy(echEnabled = it)) }, testTag = "switch_ech_enabled"); AppDivider(); IosInputFieldRow(icon = Icons.Default.Straighten, iconBg = IosSecondaryLabel, label = strings.MASQUE_INNER_MTU, value = if (config.masqueMtu > 0) config.masqueMtu.toString() else "", onValueChange = { onUpdateConfig(config.copy(masqueMtu = it.toIntOrNull()?.coerceIn(0, 9000) ?: 0)) }, placeholder = "Auto", keyboardType = KeyboardType.Number, testTag = "masque_mtu_input"); AppDivider() }
@@ -403,7 +421,7 @@ private fun SettingsSubPage(page: SettingsPage, config: AetherConfig, isBatteryO
             IosPickerRow(icon = Icons.AutoMirrored.Filled.AltRoute, iconBg = AppPalette.accentVariant, title = strings.NETWORK_STACK, value = config.ipMode.rawValue, options = AetherIpMode.entries.map { it.displayName }, onOptionSelected = { onUpdateConfig(config.copy(ipMode = AetherIpMode.entries[it])) }); AppDivider()
             Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.Bottom) { Row(modifier = Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) { IosIconBadge(icon = Icons.Default.Tune, backgroundColor = IosActiveGreen); Spacer(modifier = Modifier.width(12.dp)); IosInputField(label = strings.CUSTOM_MTU, value = config.mtu.toString(), onValueChange = { onUpdateConfig(config.copy(mtu = it.toIntOrNull() ?: 1100)) }, modifier = Modifier.weight(1f), placeholder = "1100", keyboardType = KeyboardType.Number, testTag = "mtu_input") }; Spacer(modifier = Modifier.width(8.dp)); Button(onClick = onOptimizeMtu, enabled = !isOptimizingMtu, modifier = Modifier.height(46.dp), shape = RoundedCornerShape(10.dp), colors = ButtonDefaults.buttonColors(containerColor = IosActiveBlue.copy(alpha = 0.15f), contentColor = IosActiveBlue, disabledContainerColor = IosActiveBlue.copy(alpha = 0.05f), disabledContentColor = IosActiveBlue.copy(alpha = 0.3f)), contentPadding = PaddingValues(horizontal = 16.dp)) { if (isOptimizingMtu) CircularProgressIndicator(modifier = Modifier.size(18.dp), color = IosActiveBlue, strokeWidth = 2.dp) else Text(strings.OPTIMIZE, fontSize = 13.sp, fontWeight = FontWeight.Bold) } }
         } }
-        Text(strings.CLOAK_OBFUSCATION, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold, color = IosSecondaryLabel, fontSize = 11.sp, letterSpacing = 0.5.sp, modifier = Modifier.padding(start = 8.dp, top = 4.dp))
+        GoldDotHeader(text = strings.CLOAK_OBFUSCATION)
         IosGroupCard { Column {
             IosSwitchRow(icon = Icons.Default.Security, iconBg = AppPalette.accentVariant, title = strings.CLOAK_DECOY, subtitle = if (config.cloakEnabled) strings.CLOAK_DECOY_ON else if (isDesktop) strings.CLOAK_DECOY_OFF_WIN else strings.CLOAK_DECOY_OFF_ANDROID, checked = config.cloakEnabled, onCheckedChange = { onUpdateConfig(config.copy(cloakEnabled = it)) }, testTag = "switch_cloak_enabled")
             if (config.cloakEnabled) {
@@ -438,9 +456,9 @@ private fun SettingsSubPage(page: SettingsPage, config: AetherConfig, isBatteryO
                 IosPickerRow(icon = Icons.Default.BugReport, iconBg = IosSecondaryLabel, title = strings.CLOAK_LOG_LEVEL_TITLE, value = config.cloakLogLevel, options = listOf("error", "warn", "info", "debug"), onOptionSelected = { idx -> val lvl = listOf("error", "warn", "info", "debug")[idx]; onUpdateConfig(config.copy(cloakLogLevel = lvl)) })
             }
         } }
-        IosGroupCard {
-            Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp)) {
-                Text(strings.ABOUT_CLOAK, fontWeight = FontWeight.Bold, color = Color.White, fontSize = 14.sp)
+        androidx.compose.foundation.layout.Box(modifier = Modifier.fillMaxWidth().border(1.dp, GoldOutline, RoundedCornerShape(16.dp)).clip(RoundedCornerShape(16.dp)).background(Color.White.copy(alpha = 0.06f)).padding(horizontal = 16.dp, vertical = 14.dp)) {
+            Column {
+                Row(verticalAlignment = Alignment.CenterVertically) { androidx.compose.foundation.layout.Box(modifier = Modifier.size(6.dp).clip(RoundedCornerShape(3.dp)).background(Gold)); Spacer(modifier = Modifier.width(8.dp)); Text(strings.ABOUT_CLOAK, fontWeight = FontWeight.Bold, color = Color.White, fontSize = 14.sp) }
                 Spacer(modifier = Modifier.height(6.dp))
                 Text(strings.CLOAK_ABOUT_DESC, color = IosSecondaryLabel, fontSize = 12.sp, lineHeight = 17.sp)
             }
@@ -454,6 +472,8 @@ private fun SettingsSubPage(page: SettingsPage, config: AetherConfig, isBatteryO
     val ztError = if (isZt) config.zeroTrustError() else null
     val hasAuth = config.teamName.isNotBlank() &&
         (config.accessEmail.isNotBlank() || config.accessId.isNotBlank() || config.accessSecret.isNotBlank() || config.accessToken.isNotBlank())
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    GoldDotHeader(text = strings.CAT_ZEROTRUST)
     IosGroupCard { Column {
         IosInputFieldRow(icon = Icons.Default.Business, iconBg = AppPalette.accentVariant, label = if (isZt) strings.ZT_TEAM_NAME_REQUIRED else strings.ZT_TEAM_NAME, value = config.teamName, onValueChange = { onUpdateConfig(config.copy(teamName = it)) }, placeholder = "e.g. my-org", testTag = "zt_team_input"); AppDivider()
         IosInputFieldRow(icon = Icons.Default.Language, iconBg = IosActiveBlue, label = strings.ZT_ACCESS_EMAIL, value = config.accessEmail, onValueChange = { onUpdateConfig(config.copy(accessEmail = it)) }, placeholder = "user@example.com", testTag = "zt_email_input"); AppDivider()
@@ -463,7 +483,7 @@ private fun SettingsSubPage(page: SettingsPage, config: AetherConfig, isBatteryO
             Row(modifier = Modifier.fillMaxWidth().clickable { onUpdateConfig(config.copy(teamName = "", accessEmail = "", accessId = "", accessSecret = "", accessToken = "", ztTokenExpiry = 0, ztStaySignedIn = false)) }.padding(horizontal = 16.dp, vertical = 14.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) { Row(verticalAlignment = Alignment.CenterVertically) { IosIconBadge(icon = Icons.AutoMirrored.Filled.Logout, backgroundColor = AppPalette.statusError); Spacer(modifier = Modifier.width(12.dp)); Text(strings.ZT_SIGN_OUT, fontWeight = FontWeight.Medium, color = AppPalette.statusError, fontSize = 15.sp) } }
         }
         Row(modifier = Modifier.fillMaxWidth().clickable { onToggleAdvanced(!showAdvanced) }.padding(horizontal = 16.dp, vertical = 14.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) { Row(verticalAlignment = Alignment.CenterVertically) { IosIconBadge(icon = Icons.Default.Lock, backgroundColor = IosSecondaryLabel); Spacer(modifier = Modifier.width(12.dp)); Text(strings.ZT_ADVANCED_AUTH, fontWeight = FontWeight.Medium, color = Color.White, fontSize = 15.sp) }; Icon(if (showAdvanced) Icons.Default.ExpandLess else Icons.Default.ExpandMore, null, tint = IosSecondaryLabel, modifier = Modifier.size(18.dp)) }
-        AnimatedVisibility(visible = showAdvanced, enter = fadeIn() + expandVertically(), exit = fadeOut() + shrinkVertically()) { Column(modifier = Modifier.fillMaxWidth().background(IosGroupBg.copy(alpha = 0.4f)).padding(14.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) { Text(strings.ZT_CHOOSE_ONE_METHOD, color = IosSecondaryLabel, fontSize = 12.sp); IosInputField(label = strings.ZT_ACCESS_ID, value = config.accessId, onValueChange = { onUpdateConfig(config.copy(accessId = it)) }, placeholder = "Required for Service Tokens", testTag = "zt_access_id"); IosInputField(label = strings.ZT_ACCESS_SECRET, value = config.accessSecret, onValueChange = { onUpdateConfig(config.copy(accessSecret = it)) }, placeholder = "Required for Service Tokens", testTag = "zt_access_secret"); IosInputField(label = strings.ZT_ACCESS_TOKEN, value = config.accessToken, onValueChange = { onUpdateConfig(config.copy(accessToken = it, ztTokenExpiry = config.parseJwtExpiry(it))) }, placeholder = "Existing token you already hold", testTag = "zt_access_token") } }
+        AnimatedVisibility(visible = showAdvanced, enter = fadeIn(spring(stiffness = 320f)) + expandVertically(spring(stiffness = 320f)), exit = fadeOut(spring(stiffness = 320f)) + shrinkVertically(spring(stiffness = 320f))) { Column(modifier = Modifier.fillMaxWidth().background(IosGroupBg.copy(alpha = 0.4f)).padding(14.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) { Text(strings.ZT_CHOOSE_ONE_METHOD, color = IosSecondaryLabel, fontSize = 12.sp); IosInputField(label = strings.ZT_ACCESS_ID, value = config.accessId, onValueChange = { onUpdateConfig(config.copy(accessId = it)) }, placeholder = "Required for Service Tokens", testTag = "zt_access_id"); IosInputField(label = strings.ZT_ACCESS_SECRET, value = config.accessSecret, onValueChange = { onUpdateConfig(config.copy(accessSecret = it)) }, placeholder = "Required for Service Tokens", testTag = "zt_access_secret"); IosInputField(label = strings.ZT_ACCESS_TOKEN, value = config.accessToken, onValueChange = { onUpdateConfig(config.copy(accessToken = it, ztTokenExpiry = config.parseJwtExpiry(it))) }, placeholder = "Existing token you already hold", testTag = "zt_access_token") } }
     } }
     if (ztError != null) {
         Text(
@@ -479,6 +499,8 @@ private fun SettingsSubPage(page: SettingsPage, config: AetherConfig, isBatteryO
 @Composable private fun NetworkPage(config: AetherConfig, onUpdateConfig: (AetherConfig) -> Unit, onShowToast: (String, Boolean) -> Unit = { _, _ -> }, onOpenDnsOptimizer: () -> Unit = {}) {
     val strings = LocalAppStrings.current
     val httpLocked = config.psiphonEnabled
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    GoldDotHeader(text = strings.CAT_NETWORK_PARAMETERS)
     IosGroupCard { Column {
         Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) { IosIconBadge(icon = Icons.Default.Language, backgroundColor = IosActiveBlue); Spacer(modifier = Modifier.width(12.dp)); IosInputField(label = strings.SOCKS5_HOST, value = config.socksHost, onValueChange = { onUpdateConfig(config.copy(socksHost = it)) }, modifier = Modifier.weight(1f), placeholder = "127.0.0.1", testTag = "socks_host_input"); Spacer(modifier = Modifier.width(10.dp)); IosInputField(label = strings.SOCKS_PORT, value = config.socksPort, onValueChange = { onUpdateConfig(config.copy(socksPort = it)) }, modifier = Modifier.width(75.dp), placeholder = "1819", keyboardType = KeyboardType.Number, testTag = "socks_port_input"); Spacer(modifier = Modifier.width(8.dp)); IosInputField(label = strings.HTTP_PORT, value = config.httpPort, onValueChange = { onUpdateConfig(config.copy(httpPort = it)) }, modifier = Modifier.width(75.dp), placeholder = "1820", keyboardType = KeyboardType.Number, testTag = "http_port_input") }
         AppDivider(); androidx.compose.foundation.layout.Box(modifier = if (httpLocked) Modifier.fillMaxWidth().clickable { onShowToast(strings.TOAST_DISABLE_PSIPHON_FIRST, true) } else Modifier.fillMaxWidth()) { IosSwitchRow(icon = Icons.Default.Http, iconBg = IosActiveBlue, title = strings.INTERNAL_HTTP_PROXY, subtitle = if (httpLocked) strings.INTERNAL_HTTP_PROXY_LOCKED_BY_PSIPHON else strings.INTERNAL_HTTP_PROXY_SUB, checked = config.httpProxyEnabled, enabled = !httpLocked, onCheckedChange = { if (httpLocked && !it) { onShowToast(strings.TOAST_DISABLE_PSIPHON_FIRST, true); return@IosSwitchRow }; onUpdateConfig(config.copy(httpProxyEnabled = it)) }, testTag = "switch_http_proxy_enabled") }; AppDivider()
@@ -504,7 +526,7 @@ private fun SettingsSubPage(page: SettingsPage, config: AetherConfig, isBatteryO
         }
         if (config.protocol == AetherProtocol.WG || config.protocol == AetherProtocol.GOOL) {
             IosSwitchRow(icon = Icons.Default.Bolt, iconBg = AppPalette.statusScanning, title = strings.KEEPALIVE_PACKETS, subtitle = if (config.keepaliveEnabled) strings.KEEPALIVE_ON_SUB else strings.KEEPALIVE_OFF_SUB, checked = config.keepaliveEnabled, onCheckedChange = { onUpdateConfig(config.copy(keepaliveEnabled = it)) }, testTag = "switch_keepalive_enabled"); AppDivider()
-            AnimatedVisibility(visible = config.keepaliveEnabled, enter = fadeIn() + expandVertically(), exit = fadeOut() + shrinkVertically()) { Column { IosInputFieldRow(icon = Icons.Default.Bolt, iconBg = AppPalette.statusScanning, label = strings.KEEPALIVE_INTERVAL, value = config.keepalive.toString(), onValueChange = { onUpdateConfig(config.copy(keepalive = it.toIntOrNull()?.coerceIn(1, 300) ?: 5)) }, placeholder = "5", keyboardType = KeyboardType.Number, testTag = "keepalive_input"); AppDivider() } }
+            AnimatedVisibility(visible = config.keepaliveEnabled, enter = fadeIn(spring(stiffness = 320f)) + expandVertically(spring(stiffness = 320f)), exit = fadeOut(spring(stiffness = 320f)) + shrinkVertically(spring(stiffness = 320f))) { Column { IosInputFieldRow(icon = Icons.Default.Bolt, iconBg = AppPalette.statusScanning, label = strings.KEEPALIVE_INTERVAL, value = config.keepalive.toString(), onValueChange = { onUpdateConfig(config.copy(keepalive = it.toIntOrNull()?.coerceIn(1, 300) ?: 5)) }, placeholder = "5", keyboardType = KeyboardType.Number, testTag = "keepalive_input"); AppDivider() } }
         }
         IosInputFieldRow(icon = Icons.Default.Timer, iconBg = IosSecondaryLabel, label = strings.VALIDATION_INTERVAL, value = config.validateSecs.toString(), onValueChange = { onUpdateConfig(config.copy(validateSecs = it.toIntOrNull()?.coerceIn(1, 300) ?: 10)) }, placeholder = "10", keyboardType = KeyboardType.Number, testTag = "validate_secs_input"); AppDivider()
         IosInputFieldRow(icon = Icons.Default.Timer, iconBg = IosSecondaryLabel, label = "Reconnect Interval", value = config.reconnectSecs.toString(), onValueChange = { onUpdateConfig(config.copy(reconnectSecs = it.toIntOrNull()?.coerceIn(1, 300) ?: 2)) }, placeholder = "2", keyboardType = KeyboardType.Number, testTag = "reconnect_secs_input"); AppDivider()
@@ -515,10 +537,13 @@ private fun SettingsSubPage(page: SettingsPage, config: AetherConfig, isBatteryO
         IosInputFieldRow(icon = Icons.Default.Memory, iconBg = IosSecondaryLabel, label = strings.NETSTACK_TCP_TX, value = if (config.netstackTcpTx > 0) config.netstackTcpTx.toString() else "", onValueChange = { onUpdateConfig(config.copy(netstackTcpTx = it.toIntOrNull()?.coerceIn(0, 67108864) ?: 0)) }, placeholder = "Auto (bytes)", keyboardType = KeyboardType.Number, testTag = "netstack_tx_input"); AppDivider()
         IosSwitchRow(icon = Icons.Default.Block, iconBg = AppPalette.statusError, title = "No Profile Retry", subtitle = "Disable retry with next profile on failure", checked = config.noProfileRetry, onCheckedChange = { onUpdateConfig(config.copy(noProfileRetry = it)) }, testTag = "switch_no_profile_retry")
     } }
+    }
 }
 
 @Composable private fun SecurityPage(config: AetherConfig, isAndroid: Boolean, isBatteryOptimized: Boolean, onUpdateConfig: (AetherConfig) -> Unit, onRequestBatteryOptimization: () -> Unit) {
     val strings = LocalAppStrings.current
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    GoldDotHeader(text = strings.CAT_SECURITY_RELIABILITY)
     IosGroupCard { Column {
         IosSwitchRow(icon = Icons.Default.VpnLock, iconBg = AppPalette.accentVariant, title = strings.STRICT_KILL_SWITCH, subtitle = strings.STRICT_KILL_SWITCH_SUB, checked = config.strictKillSwitch, onCheckedChange = { onUpdateConfig(config.copy(strictKillSwitch = it)) }, testTag = "switch_strict_kill_switch"); AppDivider()
         IosSwitchRow(icon = Icons.Default.Lock, iconBg = AppPalette.statusError, title = strings.KILL_SWITCH, subtitle = strings.KILL_SWITCH_SUB, checked = config.killSwitch, onCheckedChange = { onUpdateConfig(config.copy(killSwitch = it)) }, testTag = "switch_kill_switch"); AppDivider()
@@ -528,6 +553,7 @@ private fun SettingsSubPage(page: SettingsPage, config: AetherConfig, isBatteryO
         AppDivider(); IosSwitchRow(icon = Icons.Default.Sync, iconBg = IosActiveGreen, title = strings.REPROVISION, subtitle = strings.REPROVISION_SUB, checked = config.reprovision, onCheckedChange = { onUpdateConfig(config.copy(reprovision = it)) }, testTag = "switch_reprovision")
         if (isAndroid) { AppDivider(); IosSwitchRow(icon = Icons.Default.BatteryAlert, iconBg = AppPalette.statusError, title = strings.BATTERY_OPTIMIZATION, subtitle = strings.BATTERY_OPTIMIZATION_SUB, checked = isBatteryOptimized, enabled = !isBatteryOptimized, onCheckedChange = { if (it) onRequestBatteryOptimization() }, testTag = "switch_battery_opt") }
     } }
+    }
 }
 
 private data class ParsedUpstreamProxy(val scheme: String, val host: String, val port: String, val user: String, val pass: String)
@@ -560,6 +586,8 @@ private fun encodeUpstreamCredential(s: String): String = s.replace("@", "%40").
 
 @Composable private fun DiagnosticsPage(config: AetherConfig, onUpdateConfig: (AetherConfig) -> Unit) {
     val strings = LocalAppStrings.current
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    GoldDotHeader(text = strings.CAT_DIAGNOSTICS_CORE)
     IosGroupCard { Column {
         IosInputFieldRow(icon = Icons.Default.Speed, iconBg = AppPalette.statusScanning, label = strings.PING_URL_LABEL, value = config.pingUrl, onValueChange = { onUpdateConfig(config.copy(pingUrl = it)) }, placeholder = "https://www.gstatic.com/generate_204", testTag = "ping_url_input"); AppDivider()
         val logLevelOptions = AetherLogLevel.entries.map { it.displayName }
@@ -589,10 +617,13 @@ private fun encodeUpstreamCredential(s: String): String = s.replace("@", "%40").
         AppDivider(); IosSwitchRow(icon = Icons.Default.Restore, iconBg = IosActiveGreen, title = strings.QUICK_RECONNECT_STRATEGY, subtitle = strings.QUICK_RECONNECT_STRATEGY_SUB, checked = config.quickReconnect, onCheckedChange = { onUpdateConfig(config.copy(quickReconnect = it)) }, testTag = "switch_quick_reconnect"); AppDivider()
         IosSwitchRow(icon = Icons.Default.Block, iconBg = AppPalette.statusError, title = strings.STRICT_PROFILE_LOCK, subtitle = strings.STRICT_PROFILE_LOCK_SUB, checked = config.noProfileRetry, onCheckedChange = { onUpdateConfig(config.copy(noProfileRetry = it)) }, testTag = "switch_no_profile_retry")
     } }
+    }
 }
 
 @Composable private fun HevEnginePage(config: AetherConfig, onUpdateConfig: (AetherConfig) -> Unit) {
     val strings = LocalAppStrings.current
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    GoldDotHeader(text = strings.CAT_HEV_ENGINE)
     val hevLevels = listOf("error", "warn", "info", "debug")
     val levelLabels = mapOf("error" to strings.LOG_LEVEL_ERROR, "warn" to strings.HEV_LOG_WARN_DEFAULT, "info" to strings.HEV_LOG_INFO, "debug" to strings.HEV_LOG_DEBUG)
     val currentLevel = if (config.hevLogLevel in hevLevels) config.hevLogLevel else "warn"
@@ -639,16 +670,18 @@ private fun encodeUpstreamCredential(s: String): String = s.replace("@", "%40").
         )
     } }
     Spacer(modifier = Modifier.height(8.dp))
-    IosGroupCard {
-        Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp)) {
-            Text(strings.ABOUT_HEV_ENGINE, fontWeight = FontWeight.Bold, color = Color.White, fontSize = 14.sp)
+    androidx.compose.foundation.layout.Box(modifier = Modifier.fillMaxWidth().border(1.dp, GoldOutline, RoundedCornerShape(16.dp)).clip(RoundedCornerShape(16.dp)).background(Color.White.copy(alpha = 0.06f)).padding(horizontal = 16.dp, vertical = 14.dp)) {
+        Column { Row(verticalAlignment = Alignment.CenterVertically) { androidx.compose.foundation.layout.Box(modifier = Modifier.size(6.dp).clip(RoundedCornerShape(3.dp)).background(Gold)); Spacer(modifier = Modifier.width(8.dp)); Text(strings.ABOUT_HEV_ENGINE, fontWeight = FontWeight.Bold, color = Color.White, fontSize = 14.sp) }
             Spacer(modifier = Modifier.height(6.dp))
             Text(strings.HEV_ABOUT_DESC, color = IosSecondaryLabel, fontSize = 12.sp, lineHeight = 17.sp)
         }
     }
+    }
 }
 
 @Composable private fun SystemPage(isAndroid: Boolean, onExportBackup: () -> Unit, onImportBackup: () -> Unit, onOpenVpnSettings: () -> Unit, onResetClick: () -> Unit) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    GoldDotHeader(text = LocalAppStrings.current.CAT_SYSTEM_MAINTENANCE)
     IosGroupCard { Column {
         val strings = LocalAppStrings.current
         if (isAndroid) {
@@ -658,4 +691,5 @@ private fun encodeUpstreamCredential(s: String): String = s.replace("@", "%40").
         IosActionRow(icon = Icons.Default.CloudDownload, iconBg = IosActiveGreen, title = strings.RESTORE_BACKUP_TITLE, subtitle = strings.RESTORE_BACKUP_SUB, onClick = onImportBackup); AppDivider()
         IosActionRow(icon = Icons.Default.DeleteForever, iconBg = AppPalette.statusError, title = strings.RESET_DEFAULTS, subtitle = strings.RESET_DEFAULTS_SUB, onClick = onResetClick, titleColor = AppPalette.statusError)
     } }
+    }
 }

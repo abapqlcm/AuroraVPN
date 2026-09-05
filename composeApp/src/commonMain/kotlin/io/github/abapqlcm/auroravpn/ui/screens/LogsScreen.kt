@@ -2,6 +2,7 @@ package io.github.abapqlcm.auroravpn.shared.ui.screens
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.abapqlcm.auroravpn.shared.ui.theme.AppPalette
 
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
@@ -76,9 +77,15 @@ import io.github.abapqlcm.auroravpn.shared.model.AetherLogLevel
 import io.github.abapqlcm.auroravpn.platform.isDesktop
 import io.github.abapqlcm.auroravpn.shared.ui.AetherViewModel
 import io.github.abapqlcm.auroravpn.shared.i18n.LocalAppStrings
+import io.github.abapqlcm.auroravpn.shared.ui.components.GoldHeaderBar
+import io.github.abapqlcm.auroravpn.shared.ui.components.GlassCard
+import io.github.abapqlcm.auroravpn.shared.ui.components.GoldDotHeader
 import io.github.abapqlcm.auroravpn.shared.ui.components.LogsVerticalScrollbar
 import kotlinx.coroutines.launch
 
+private val Gold = androidx.compose.ui.graphics.Color(0xFFD4AF37)
+private val GoldOutline = androidx.compose.ui.graphics.Color(0xFFD4AF37).copy(alpha = 0.22f)
+private val GoldDivider = androidx.compose.ui.graphics.Color(0xFFD4AF37).copy(alpha = 0.18f)
 private val IosCardBg = AppPalette.surfaceRaised
 private val IosSecondaryLabel = AppPalette.textSecondary
 private val IosActiveBlue = AppPalette.accent
@@ -146,20 +153,10 @@ fun LogsScreen(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column {
-                    Text(
-                        text = strings.LOGS_TITLE,
-                        style = MaterialTheme.typography.headlineMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White,
-                        fontSize = (26 * scaleFactor).sp
-                    )
-                    Text(
-                        text = strings.LOGS_SUBTITLE,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = IosSecondaryLabel,
-                        fontSize = (11 * scaleFactor).sp
-                    )
+                Column(modifier = Modifier.weight(1f).clip(RoundedCornerShape(16.dp)).background(Color(0xFF1A1A1D)).border(1.dp, GoldOutline, RoundedCornerShape(16.dp)).padding(horizontal = 12.dp, vertical = 8.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) { Box(modifier = Modifier.size(7.dp).clip(CircleShape).background(Gold)); Spacer(modifier = Modifier.width(8.dp)); Text(text = strings.LOGS_TITLE, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold, color = Color.White, fontSize = (22 * scaleFactor).sp) }
+                    Text(text = strings.LOGS_SUBTITLE, style = MaterialTheme.typography.bodySmall, color = IosSecondaryLabel, fontSize = (10 * scaleFactor).sp, modifier = Modifier.padding(start = 15.dp, top = 2.dp))
+                    Box(modifier = Modifier.padding(top = 6.dp).fillMaxWidth().height(1.dp).background(GoldDivider))
                 }
 
                 Row {
@@ -208,10 +205,10 @@ fun LogsScreen(
 
             if (config.coreLogLevel == AetherLogLevel.OFF) {
                 Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = CardDefaults.cardColors(containerColor = IosCardBg),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                    modifier = Modifier.fillMaxWidth().border(1.dp, GoldOutline, RoundedCornerShape(16.dp)),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.06f)),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
                 ) {
                     Row(
                         modifier = Modifier.padding((12 * scaleFactor).dp),
@@ -282,6 +279,7 @@ fun LogsScreen(
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(10.dp))
                     .background(IosCardBg)
+                    .border(1.dp, GoldOutline, RoundedCornerShape(10.dp))
                     .padding(2.dp),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
@@ -326,6 +324,7 @@ fun LogsScreen(
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(10.dp))
                     .background(IosCardBg)
+                    .border(1.dp, GoldOutline, RoundedCornerShape(10.dp))
                     .padding(2.dp),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
@@ -364,9 +363,10 @@ fun LogsScreen(
             Surface(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .weight(1f),
-                shape = RoundedCornerShape(14.dp),
-                color = IosCardBg
+                    .weight(1f)
+                    .border(1.dp, GoldOutline, RoundedCornerShape(16.dp)),
+                shape = RoundedCornerShape(16.dp),
+                color = Color.White.copy(alpha = 0.06f)
             ) {
                 if (filteredLogs.isEmpty()) {
                     Box(
@@ -429,8 +429,8 @@ fun LogsScreen(
 
                         androidx.compose.animation.AnimatedVisibility(
                             visible = showScrollToBottom,
-                            enter = fadeIn() + scaleIn(),
-                            exit = fadeOut() + scaleOut(),
+                            enter = fadeIn(spring(stiffness = 320f)) + scaleIn(spring(stiffness = 320f)),
+                            exit = fadeOut(spring(stiffness = 320f)) + scaleOut(spring(stiffness = 320f)),
                             modifier = Modifier
                                 .align(Alignment.BottomEnd)
                                 .padding(12.dp)

@@ -1,9 +1,27 @@
 <?xml version="1.0" encoding="utf-8"?>
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
-    <path android:fillColor="#FFD4AF37" android:pathData="M54,24 L76,32 V52 C76,66 66,78 54,84 C42,78 32,66 32,52 V32 Z" />
-    <path android:fillColor="#FFFFD700" android:pathData="M54,30 L70,36 V52 C70,63 62,72 54,77 C46,72 38,63 38,52 V36 Z" />
-    <path android:fillColor="#FF0A0A0B" android:pathData="M54,38 L64,42 V52 C64,59 59,65 54,68 C49,65 44,59 44,52 V42 Z" />
-    <path android:fillColor="#FFFFD700" android:pathData="M54,44 L59,46 V52 C59,55 56,58 54,60 C52,58 49,55 49,52 V46 Z" />
-    <path android:fillColor="#FFD4AF37" android:pathData="M54,66 h10 v3 h-10 Z M54,71 h10 v3 h-10 Z" />
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- outer gold shield -->
+    <path
+        android:fillColor="#FFD4AF37"
+        android:pathData="M54,22 L78,31 V53 C78,68 67,80 54,86 C41,80 30,68 30,53 V31 Z" />
+    <!-- inner dark shield for depth -->
+    <path
+        android:fillColor="#FF0A0A0B"
+        android:pathData="M54,28 L72,35 V53 C72,64 63,74 54,79 C45,74 36,64 36,53 V35 Z" />
+    <!-- inner gold highlight -->
+    <path
+        android:fillColor="#FFFFD700"
+        android:pathData="M54,36 L66,41 V53 C66,60 60,67 54,70 C48,67 42,60 42,53 V41 Z" />
+    <!-- center gold accent -->
+    <path
+        android:fillColor="#FFD4AF37"
+        android:pathData="M54,44 L59,46 V53 C59,56 56,59 54,61 C52,59 49,56 49,53 V46 Z" />
+    <!-- bottom gold bar detail -->
+    <path
+        android:fillColor="#FFD4AF37"
+        android:pathData="M46,66 h16 v2 h-16 Z M46,70 h16 v2 h-16 Z" />
 </vector>
