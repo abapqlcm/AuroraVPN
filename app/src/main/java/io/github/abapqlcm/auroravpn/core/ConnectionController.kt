@@ -261,7 +261,7 @@ class ConnectionController private constructor(context: Context) : ConnectionCon
                                 if (awaitPsiphonStable()) {
                                     ActiveProxyProvider.psiphonProxyUrl = PsiphonController.getUpstreamProxy()
                                     LogRepository.i("[Controller] Psiphon over MASQUE ready via ${ActiveProxyProvider.psiphonProxyUrl}")
-                                    try { val intent = Intent().setClassName(appContext.packageName, "io.github.abapqlcm.auroravpn.service.AetherVpnService").apply { action = "io.github.abapqlcm.auroravpn.SWITCH_HEV"; putExtra("host", "127.0.0.1"); putExtra("port", 3080) }; appContext.startService(intent) } catch (_: Exception) {}
+                                    try { val intent = Intent().setClassName(appContext.packageName, "io.github.abapqlcm.auroravpn.service.AetherVpnService").apply { action = "io.github.abapqlcm.auroravpn.SWITCH_HEV"; putExtra("host", "127.0.0.1"); putExtra("port", resolvePsiphonSocksPort()) }; appContext.startService(intent) } catch (_: Exception) {}
                                     notifyStatusChanged(appContext, ConnectionStatus.RUNNING)
                                 } else {
                                     LogRepository.e("[Controller] Psiphon not connected over MASQUE via http - chain requires Psiphon, aborting")
@@ -316,7 +316,7 @@ class ConnectionController private constructor(context: Context) : ConnectionCon
                         if (awaitPsiphonStable()) {
                             ActiveProxyProvider.psiphonProxyUrl = PsiphonController.getUpstreamProxy()
                             LogRepository.i("[Controller] Psiphon over MASQUE ready via ${ActiveProxyProvider.psiphonProxyUrl}")
-                            try { val intent = Intent().setClassName(appContext.packageName, "io.github.abapqlcm.auroravpn.service.AetherVpnService").apply { action = "io.github.abapqlcm.auroravpn.SWITCH_HEV"; putExtra("host", "127.0.0.1"); putExtra("port", 3080) }; appContext.startService(intent) } catch (_: Exception) {}
+                            try { val intent = Intent().setClassName(appContext.packageName, "io.github.abapqlcm.auroravpn.service.AetherVpnService").apply { action = "io.github.abapqlcm.auroravpn.SWITCH_HEV"; putExtra("host", "127.0.0.1"); putExtra("port", resolvePsiphonSocksPort()) }; appContext.startService(intent) } catch (_: Exception) {}
                             notifyStatusChanged(appContext, ConnectionStatus.RUNNING)
                         } else {
                             LogRepository.e("[Controller] Psiphon not connected over MASQUE via http - chain requires Psiphon, aborting")
@@ -359,7 +359,7 @@ class ConnectionController private constructor(context: Context) : ConnectionCon
                                 if (awaitPsiphonStable()) {
                                     ActiveProxyProvider.psiphonProxyUrl = PsiphonController.getUpstreamProxy()
                                     LogRepository.i("[Controller] Psiphon over ${effectiveConfig.protocol} ready via ${ActiveProxyProvider.psiphonProxyUrl}")
-                                    try { val intent = Intent().setClassName(appContext.packageName, "io.github.abapqlcm.auroravpn.service.AetherVpnService").apply { action = "io.github.abapqlcm.auroravpn.SWITCH_HEV"; putExtra("host", "127.0.0.1"); putExtra("port", 3080) }; appContext.startService(intent) } catch (_: Exception) {}
+                                    try { val intent = Intent().setClassName(appContext.packageName, "io.github.abapqlcm.auroravpn.service.AetherVpnService").apply { action = "io.github.abapqlcm.auroravpn.SWITCH_HEV"; putExtra("host", "127.0.0.1"); putExtra("port", resolvePsiphonSocksPort()) }; appContext.startService(intent) } catch (_: Exception) {}
                                     notifyStatusChanged(appContext, ConnectionStatus.RUNNING)
                                 } else {
                                     if (effectiveConfig.protocol == AetherProtocol.MASQUE && masqueOrder == "auto") {
@@ -470,7 +470,7 @@ class ConnectionController private constructor(context: Context) : ConnectionCon
                                     val intent = Intent().setClassName(appContext.packageName, "io.github.abapqlcm.auroravpn.service.AetherVpnService").apply {
                                         action = "io.github.abapqlcm.auroravpn.SWITCH_HEV"
                                         putExtra("host", "127.0.0.1")
-                                        putExtra("port", 3080)
+                                        putExtra("port", resolvePsiphonSocksPort())
                                     }
                                     appContext.startService(intent)
                                 } catch (_: Exception) {}
@@ -564,7 +564,7 @@ class ConnectionController private constructor(context: Context) : ConnectionCon
                                         val intent = Intent().setClassName(appContext.packageName, "io.github.abapqlcm.auroravpn.service.AetherVpnService").apply {
                                             action = "io.github.abapqlcm.auroravpn.SWITCH_HEV"
                                             putExtra("host", "127.0.0.1")
-                                            putExtra("port", 3080)
+                                            putExtra("port", resolvePsiphonSocksPort())
                                         }
                                         appContext.startService(intent)
                                     } catch (_: Exception) {}
@@ -661,7 +661,7 @@ class ConnectionController private constructor(context: Context) : ConnectionCon
                                     val intent = Intent().setClassName(appContext.packageName, "io.github.abapqlcm.auroravpn.service.AetherVpnService").apply {
                                         action = "io.github.abapqlcm.auroravpn.SWITCH_HEV"
                                         putExtra("host", "127.0.0.1")
-                                        putExtra("port", 3080)
+                                        putExtra("port", resolvePsiphonSocksPort())
                                     }
                                     appContext.startService(intent)
                                 } catch (_: Exception) {}
@@ -855,6 +855,14 @@ class ConnectionController private constructor(context: Context) : ConnectionCon
             LogRepository.i("[Controller] Core stopped")
         }
         }
+    }
+
+    private fun resolvePsiphonSocksPort(): Int {
+        fun parsePort(url: String?): Int? = try {
+            val after = url?.substringAfter("127.0.0.1:") ?: url?.substringAfter("localhost:") ?: return null
+            after.substringBefore("/").substringBefore("?").trim().toIntOrNull()
+        } catch (_: Exception) { null }
+        return parsePort(ActiveProxyProvider.psiphonProxyUrl) ?: parsePort(PsiphonController.getUpstreamProxy()) ?: 3080
     }
 
     private suspend fun awaitPsiphonStable(timeoutSec: Int = 30, stableMs: Long = 5000): Boolean {
