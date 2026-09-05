@@ -112,9 +112,9 @@ compose.desktop {
         mainClass = "io.github.abapqlcm.auroravpn.MainKt"
         nativeDistributions {
             targetFormats(org.jetbrains.compose.desktop.application.dsl.TargetFormat.Msi, org.jetbrains.compose.desktop.application.dsl.TargetFormat.Exe)
-            packageName = "AuroraVPN-Tunnel"
+            packageName = "AuroraVPN"
             packageVersion = "1.1.1"
-            vendor = "ImMaghzBad"
+            vendor = "AuroraVPN"
             description = "AuroraVPN High-Performance Proxy Tunnel"
 
             appResourcesRootDir.set(project.layout.projectDirectory.dir("src/desktopMain/resources"))

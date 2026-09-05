@@ -5,44 +5,50 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 
-val ElegantPrimary = Color(0xFFD0BCFF)
-val ElegantOnPrimary = Color(0xFF381E72)
-val ElegantPrimaryContainer = Color(0xFF381E72)
-val ElegantOnPrimaryContainer = Color(0xFFEADDFF)
-val ElegantSecondary = Color(0xFFCCC2DC)
-val ElegantBackground = Color(0xFF000000)
-val ElegantSurface = Color(0xFF000000)
-val ElegantSurfaceCard = Color(0xFF1C1B1F)
-val ElegantSurfaceActive = Color(0xFF4A4458)
-val ElegantOutline = Color(0xFF49454F)
-val ElegantTextPrimary = Color(0xFFE6E1E5)
-val ElegantTextSecondary = Color(0xFFCAC4D0)
-val ConnectedGreen = Color(0xFF81C784)
-val ScanningAmber = Color(0xFFFFB74D)
-val ErrorRed = Color(0xFFF2B8B5)
+// Legacy elegant (kept for compat)
+val ElegantPrimary = Color(0xFFD4AF37)
+val ElegantOnPrimary = Color(0xFF0A0A0B)
+val ElegantPrimaryContainer = Color(0xFF2A2008)
+val ElegantOnPrimaryContainer = Color(0xFFFFE8A0)
+val ElegantSecondary = Color(0xFFC9B88A)
+val ElegantBackground = Color(0xFF0A0A0B)
+val ElegantSurface = Color(0xFF141418)
+val ElegantSurfaceCard = Color(0xFF1E1E20)
+val ElegantSurfaceActive = Color(0xFF332F1A)
+val ElegantOutline = Color(0xFF3A3520)
+val ElegantTextPrimary = Color(0xFFF5F0D8)
+val ElegantTextSecondary = Color(0xFF9E9580)
+val ConnectedGreen = Color(0xFF34C759)
+val ScanningAmber = Color(0xFFFF9500)
+val ErrorRed = Color(0xFFFF3B30)
 
 object AppPalette {
-    val accent = Color(0xFF007AFF)
-    val accentVariant = Color(0xFF5856D6)
-    val accentVariantAlt = Color(0xFFAF52DE)
-    val onAccent = Color(0xFFFFFFFF)
+    // Gold lux
+    val accent = Color(0xFFD4AF37)          // metallic gold
+    val accentVariant = Color(0xFFB8860B)   // dark goldenrod
+    val accentVariantAlt = Color(0xFFFFD700)
+    val onAccent = Color(0xFF0A0A0B)
 
-    val statusConnected = Color(0xFF34C759)
+    val goldNeon = Color(0xFFFFD700)
+    val goldDark = Color(0xFF8C6A12)
+    val goldGlow = Color(0x33FFD700)
+
+    val statusConnected = Color(0xFFD4AF37)
     val statusScanning = Color(0xFFFF9500)
     val statusError = Color(0xFFFF3B30)
-    val debugCyan = Color(0xFF64D2FF)
+    val debugCyan = Color(0xFFD4AF37)
 
-    val surfaceRaised = Color(0xFF1C1C1E)
-    val surfaceSunken = Color(0xFF0A0A0D)
-    val groupBg = Color(0xFF2C2C2E)
-    val divider = Color(0xFF2C2C2E)
+    val surfaceRaised = Color(0xFF1A1A1D)
+    val surfaceSunken = Color(0xFF0A0A0B)
+    val groupBg = Color(0xFF1E1E20)
+    val divider = Color(0xFF2A2A2C)
     val inactiveTrack = Color(0xFF3A3A3C)
 
-    val textPrimary = Color(0xFFECECF1)
-    val textSecondary = Color(0xFF8E8E93)
+    val textPrimary = Color(0xFFF5F0D8)
+    val textSecondary = Color(0xFF9E9580)
 
-    val navBackground = Color(0xFF1C1C1E)
-    val navActive = Color(0xFF007AFF)
+    val navBackground = Color(0xFF141418)
+    val navActive = Color(0xFFD4AF37)
     val navInactive = Color(0xFF8E8E93)
 }
 
@@ -88,22 +94,22 @@ internal val darkAppColors = AppColors(
 )
 
 internal val lightAppColors = AppColors(
-    accent = Color(0xFF0A6CFF),
+    accent = Color(0xFFB8860B),
     onAccent = Color(0xFFFFFFFF),
-    accentVariant = Color(0xFF5E5CE6),
-    debugCyan = Color(0xFF0A84FF),
+    accentVariant = Color(0xFF8C6A12),
+    debugCyan = Color(0xFFB8860B),
     surfaceRaised = Color(0xFFFFFFFF),
-    surfaceSunken = Color(0xFFF2F3F7),
-    groupBg = Color(0xFFECECF1),
-    divider = Color(0xFFDCDCE2),
-    inactiveTrack = Color(0xFFD1D1D6),
-    textPrimary = Color(0xFF1A1A1F),
-    textSecondary = Color(0xFF5A5A63),
-    statusConnected = Color(0xFF1E9E6B),
-    statusScanning = Color(0xFFC77D1E),
+    surfaceSunken = Color(0xFFF7F3E6),
+    groupBg = Color(0xFFECE8D8),
+    divider = Color(0xFFDDD8C4),
+    inactiveTrack = Color(0xFFD1CFC0),
+    textPrimary = Color(0xFF1A1A0B),
+    textSecondary = Color(0xFF6B6655),
+    statusConnected = Color(0xFF7A6500),
+    statusScanning = Color(0xFF8C5A00),
     statusError = Color(0xFFC0392B),
-    navBackground = Color(0xFFF2F3F7),
-    navActive = Color(0xFF0A6CFF),
+    navBackground = Color(0xFFF7F3E6),
+    navActive = Color(0xFFB8860B),
     navInactive = Color(0xFF8A8A95),
 )
 
