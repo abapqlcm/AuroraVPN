@@ -320,7 +320,7 @@ object StringsFa : AppStrings {
     override val ABOUT_LINK_PSIPHON = "سورس تونل سایفون"
     override val ABOUT_LINK_PSIPHON_SUB = "هسته اوپن‌سورس عبور از فیلتر"
     override val ABOUT_FOOTER_BUILT = "ساخته شده با "
-    override val ABOUT_FOOTER_BY = " با عشق توسط PowerSigma"
+    override val ABOUT_FOOTER_BY = " با عشق توسط iprez"
     override val ABOUT_FOOTER_DESC = "AuroraVPN یه پروژه مستقلـه؛ هستهٔ Aether رو بچه‌های CluvexStudio ساختن و اوپن‌سورسه."
     override val ONBOARDING_WELCOME = "به AuroraVPN خوش اومدی"
     override val ONBOARDING_WELCOME_DESC = "بیا تو چند قدم سریع اتصالتو امن کنیم."

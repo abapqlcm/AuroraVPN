@@ -22,6 +22,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -50,7 +51,7 @@ fun OnboardingScreen(
     BoxWithConstraints(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black)
+            .background(Brush.verticalGradient(listOf(Color(0xFF0A0A0B), Color(0xFF141418), Color(0xFF0A0A0B))))
     ) {
         val screenWidth = this.maxWidth
         val scaleFactor = (screenWidth.value / 411f).coerceIn(0.7f, 1.1f)

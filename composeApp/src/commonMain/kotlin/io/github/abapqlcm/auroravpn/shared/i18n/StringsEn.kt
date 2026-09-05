@@ -320,7 +320,7 @@ object StringsEn : AppStrings {
     override val ABOUT_LINK_PSIPHON = "Psiphon Tunnel Source"
     override val ABOUT_LINK_PSIPHON_SUB = "Open-source censorship circumvention core"
     override val ABOUT_FOOTER_BUILT = "Built with "
-    override val ABOUT_FOOTER_BY = " by PowerSigma Team"
+    override val ABOUT_FOOTER_BY = " by iprez Team"
     override val ABOUT_FOOTER_DESC = "AuroraVPN is an independent client project. The Aether core is developed by CluvexStudio and distributed under its own open-source license."
     override val ONBOARDING_WELCOME = "Welcome to AuroraVPN"
     override val ONBOARDING_WELCOME_DESC = "Let\u2019s prepare your secure connection in a few quick steps."

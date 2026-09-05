@@ -1,7 +1,7 @@
 {
-  "version": "1.1.0-lux",
-  "version_code": 9,
+  "version": "1.1.1-lux",
+  "version_code": 10,
   "is_beta": false,
-  "changelog": "Lux black+gold redesign \u2014 same core, new premium UI.",
-  "release_url": "https://github.com/abapqlcm/AuroraVPN/releases/tag/v1.1.0-lux-android"
+  "changelog": "fix HEV JNI path + new lux motion (Create by @iprez), remove telegram popup",
+  "release_url": "https://github.com/abapqlcm/AuroraVPN/releases/tag/v1.1.1-lux-android"
 }
