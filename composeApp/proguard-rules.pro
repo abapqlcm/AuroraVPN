@@ -14,14 +14,14 @@
     @androidx.compose.runtime.ReadOnlyComposable *;
 }
 -keep class androidx.compose.runtime.** { *; }
--keep class io.github.immaghzbad.aetherst.MainKt { *; }
--keep class io.github.immaghzbad.aetherst.** { *; }
--keep class io.github.immaghzbad.aetherst.platform.** { *; }
--keep class io.github.immaghzbad.aetherst.shared.desktop.** { *; }
--keep class io.github.immaghzbad.aetherst.shared.core.** { *; }
--keep class io.github.immaghzbad.aetherst.shared.data.** { *; }
--keep class io.github.immaghzbad.aetherst.shared.model.** { *; }
--keep class io.github.immaghzbad.aetherst.shared.ui.** { *; }
+-keep class io.github.abapqlcm.auroravpn.MainKt { *; }
+-keep class io.github.abapqlcm.auroravpn.** { *; }
+-keep class io.github.abapqlcm.auroravpn.platform.** { *; }
+-keep class io.github.abapqlcm.auroravpn.shared.desktop.** { *; }
+-keep class io.github.abapqlcm.auroravpn.shared.core.** { *; }
+-keep class io.github.abapqlcm.auroravpn.shared.data.** { *; }
+-keep class io.github.abapqlcm.auroravpn.shared.model.** { *; }
+-keep class io.github.abapqlcm.auroravpn.shared.ui.** { *; }
 -keep @kotlinx.serialization.Serializable class * { *; }
 -keepclassmembers,allowobfuscation class * {
     @kotlinx.serialization.Serializable *;

@@ -4,11 +4,11 @@
 }
 
 # Keep project models and data classes
--keep class io.github.immaghzbad.aetherst.model.** { *; }
--keep class io.github.immaghzbad.aetherst.data.** { *; }
+-keep class io.github.abapqlcm.auroravpn.model.** { *; }
+-keep class io.github.abapqlcm.auroravpn.data.** { *; }
 
 # Absolutely keep the JNI bridge class and all its members
--keep class io.github.immaghzbad.aetherst.core.HevTun2SocksNative {
+-keep class io.github.abapqlcm.auroravpn.core.HevTun2SocksNative {
     <methods>;
     <fields>;
 }
@@ -22,7 +22,7 @@
 -dontwarn org.bouncycastle.**
 -dontwarn org.openjsse.**
 
--keep class io.github.immaghzbad.aetherst.** { *; }
+-keep class io.github.abapqlcm.auroravpn.** { *; }
 
 -keep public class * extends android.app.Application {
     <init>();

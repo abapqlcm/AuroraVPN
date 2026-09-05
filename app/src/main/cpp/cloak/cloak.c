@@ -1548,7 +1548,7 @@ static void* jni_cloak_thread(void* arg) {
     return NULL;
 }
 
-JNIEXPORT jint JNICALL Java_io_github_immaghzbad_aetherst_core_CloakNative_start(JNIEnv* env, jclass clazz, jstring jPath) {
+JNIEXPORT jint JNICALL Java_io_github_abapqlcm_auroravpn_core_CloakNative_start(JNIEnv* env, jclass clazz, jstring jPath) {
     if (g_jni_running) return -1;
     const char* path = (*env)->GetStringUTFChars(env, jPath, 0);
     strncpy(g_jni_config_path, path, sizeof(g_jni_config_path)-1);
@@ -1563,7 +1563,7 @@ JNIEXPORT jint JNICALL Java_io_github_immaghzbad_aetherst_core_CloakNative_start
     return 0;
 }
 
-JNIEXPORT jint JNICALL Java_io_github_immaghzbad_aetherst_core_CloakNative_stop(JNIEnv* env, jclass clazz) {
+JNIEXPORT jint JNICALL Java_io_github_abapqlcm_auroravpn_core_CloakNative_stop(JNIEnv* env, jclass clazz) {
     g_shutdown_requested = 1;
     if (g_jni_listen_fd >= 0) {
         shutdown(g_jni_listen_fd, SHUT_RDWR);
@@ -1574,11 +1574,11 @@ JNIEXPORT jint JNICALL Java_io_github_immaghzbad_aetherst_core_CloakNative_stop(
     return 0;
 }
 
-JNIEXPORT jint JNICALL Java_io_github_immaghzbad_aetherst_core_CloakNative_isRunning(JNIEnv* env, jclass clazz) {
+JNIEXPORT jint JNICALL Java_io_github_abapqlcm_auroravpn_core_CloakNative_isRunning(JNIEnv* env, jclass clazz) {
     return g_jni_running;
 }
 
-JNIEXPORT void JNICALL Java_io_github_immaghzbad_aetherst_core_CloakNative_setLogLevel(JNIEnv* env, jclass clazz, jint level) {
+JNIEXPORT void JNICALL Java_io_github_abapqlcm_auroravpn_core_CloakNative_setLogLevel(JNIEnv* env, jclass clazz, jint level) {
     if (level <= LOG_ERROR) g_log_level = LOG_ERROR;
     else if (level == 1) g_log_level = LOG_WARN;
     else if (level == 2) g_log_level = LOG_INFO;

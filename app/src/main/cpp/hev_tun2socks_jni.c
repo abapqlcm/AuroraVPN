@@ -60,9 +60,27 @@ native_get_version (JNIEnv *env, jobject thiz)
     return 2171;
 }
 
+static void
+native_pause(JNIEnv *env, jobject thiz) {
+    LOGI("nativePause (no-op stub)");
+}
+
+static void
+native_resume(JNIEnv *env, jobject thiz) {
+    LOGI("nativeResume (no-op stub)");
+}
+
+static void
+native_update_upstream(JNIEnv *env, jobject thiz, jstring host, jint port) {
+    LOGI("nativeUpdateUpstream (no-op stub)");
+}
+
 static JNINativeMethod g_methods[] = {
     { "nativeStart", "(Ljava/lang/String;I)I", (void *)native_start },
     { "nativeStop", "()V", (void *)native_stop },
+    { "nativePause", "()V", (void *)native_pause },
+    { "nativeResume", "()V", (void *)native_resume },
+    { "nativeUpdateUpstream", "(Ljava/lang/String;I)V", (void *)native_update_upstream },
     { "nativeGetStats", "()[J", (void *)native_get_stats },
     { "nativeGetVersion", "()I", (void *)native_get_version },
 };
