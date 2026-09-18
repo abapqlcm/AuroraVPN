@@ -15,4 +15,7 @@ app/release/
 captures/
 # Rust build artifacts. Never tracked.
 native/**/target/
-Cargo.lock is tracked for the bridge; target/ never is.
+# boring-sys ships its build script in build/main.rs — a Rust source file,
+# not Gradle output. A bare "build/" rule would exclude it and the engine
+# cannot compile without it.
+!native/third-party/boring-sys/build/

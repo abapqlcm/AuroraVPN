@@ -73,11 +73,19 @@ jobs:
         shell: bash
         run: |
           echo "ANDROID_HOME=$ANDROID_HOME"
-          echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/${{ env.ANDROID_NDK_VERSION }}" >> "$GITHUB_ENV"
+          # The runner images ship a preinstalled NDK whose version differs
+          # from the one installed above, and ANDROID_NDK_ROOT still points at
+          # it. cargo-ndk reads ANDROID_NDK_ROOT, and the mismatch makes it
+          # pick a different toolchain than the one requested. Force both
+          # variables at the same NDK.
+          NDK="$ANDROID_HOME/ndk/${{ env.ANDROID_NDK_VERSION }}"
+          echo "ANDROID_NDK_HOME=$NDK" >> "$GITHUB_ENV"
+          echo "ANDROID_NDK_ROOT=$NDK" >> "$GITHUB_ENV"
           CMAKE_BIN="$ANDROID_HOME/cmake/${{ env.ANDROID_CMAKE_VERSION }}/bin"
           echo "$CMAKE_BIN" >> "$GITHUB_PATH"
           echo "CMAKE=$CMAKE_BIN/cmake" >> "$GITHUB_ENV"
           ls -l "$CMAKE_BIN"
+          ls -d "$ANDROID_HOME"/ndk/* || true
 
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
