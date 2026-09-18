@@ -21,6 +21,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.auroravpn.app.ui.AuroraConnectionState
@@ -48,6 +51,8 @@ fun AuroraHomeScreen(
     val traffic by viewModel.traffic.collectAsStateWithLifecycle()
     val addresses by viewModel.addresses.collectAsStateWithLifecycle()
     val version by viewModel.engineVersion.collectAsStateWithLifecycle()
+    val sessionElapsed by viewModel.sessionClock.collectAsStateWithLifecycle()
+    val activeEndpoint by viewModel.activeEndpoint.collectAsStateWithLifecycle()
 
     Column(
         modifier = modifier
@@ -66,6 +71,7 @@ fun AuroraHomeScreen(
         ConnectionCard(
             connection = connection,
             transport = settings.transport.wireName,
+            activeEndpoint = activeEndpoint,
             onConnect = { onConnect(settings) },
             onDisconnect = onDisconnect,
             canToggle = viewModel.canToggleConnection,
@@ -82,6 +88,7 @@ fun AuroraHomeScreen(
             connection = connection,
             version = version,
             mode = settings.mode.wireName,
+            sessionElapsedMillis = sessionElapsed,
         )
     }
 }
@@ -90,6 +97,7 @@ fun AuroraHomeScreen(
 private fun ConnectionCard(
     connection: AuroraConnectionState,
     transport: String,
+    activeEndpoint: String,
     onConnect: () -> Unit,
     onDisconnect: () -> Unit,
     canToggle: Boolean,
@@ -103,7 +111,7 @@ private fun ConnectionCard(
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(text = stageLabel(connection), style = MaterialTheme.typography.titleMedium)
             Text(
-                text = connectionMessage(connection).ifBlank { "No details yet." },
+                text = connectionMessage(connection, activeEndpoint).ifBlank { "No details yet." },
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -112,10 +120,16 @@ private fun ConnectionCard(
                     text = "Transport: $transport",
                     style = MaterialTheme.typography.bodyMedium,
                 )
-                if (connection.peer.isNotBlank()) {
+                // The engine publishes the peer it dialled. When it has not
+                // chosen one the field is simply absent, rather than a label
+                // claiming a value exists that nothing reported.
+                if (activeEndpoint.isNotBlank()) {
                     Text(
-                        text = "Endpoint: ${connection.peer}",
+                        text = "Endpoint: $activeEndpoint",
                         style = MaterialTheme.typography.bodyMedium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Visible,
+                        softWrap = false,
                     )
                 }
             }
@@ -228,11 +242,12 @@ private fun SessionCard(
     connection: AuroraConnectionState,
     version: String?,
     mode: String,
+    sessionElapsedMillis: Long,
 ) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(text = "Session", style = MaterialTheme.typography.titleMedium)
-            SessionRow(label = "Duration", value = durationOf(connection))
+            SessionRow(label = "Duration", value = durationOf(connection, sessionElapsedMillis))
             SessionRow(label = "Engine mode", value = mode.uppercase())
             SessionRow(label = "Engine version", value = version ?: "Native core not loaded")
         }
@@ -243,10 +258,25 @@ private fun SessionCard(
 private fun SessionRow(label: String, value: String) {
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(label, style = MaterialTheme.typography.bodyMedium)
-        Text(value, style = MaterialTheme.typography.bodyMedium)
+        // Label reserved at its natural width so a long value -- an engine
+        // version string, a mode name -- cannot crowd it into wrapping.
+        Text(
+            label,
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.padding(end = 16.dp),
+        )
+        Text(
+            value,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = androidx.compose.ui.text.style.TextAlign.End,
+            maxLines = 1,
+            overflow = TextOverflow.Visible,
+            softWrap = false,
+            modifier = Modifier.weight(1f),
+        )
     }
 }
 
@@ -259,22 +289,25 @@ private fun stageLabel(state: AuroraConnectionState): String = when (state) {
     is AuroraConnectionState.Failed -> "Connection failed"
 }
 
-private fun connectionMessage(state: AuroraConnectionState): String = when (state) {
+private fun connectionMessage(state: AuroraConnectionState, activeEndpoint: String): String = when (state) {
     is AuroraConnectionState.Idle -> "Press Connect to start a session."
     is AuroraConnectionState.Preparing -> state.message
     is AuroraConnectionState.Connecting -> state.message
-    is AuroraConnectionState.Connected -> "The tunnel is up. Endpoint " + state.peer.ifBlank { "unknown" } + "."
+    is AuroraConnectionState.Connected ->
+        // The peer is the address the engine dialled. Absent means the engine has
+        // not published one for this session -- reported as such, never filled in.
+        if (activeEndpoint.isBlank()) "The tunnel is up." else "The tunnel is up. Endpoint $activeEndpoint."
     is AuroraConnectionState.Stopping -> state.message.ifBlank { "Ending the session." }
     is AuroraConnectionState.Failed -> state.message.ifBlank { "The engine reported a failure." }
 }
 
-private fun durationOf(state: AuroraConnectionState): String {
-    val startedAt = (state as? AuroraConnectionState.Connected)?.startedAt ?: return "—"
-    if (startedAt <= 0L) return "—"
-    val elapsed = System.currentTimeMillis() - startedAt
-    if (elapsed < 0) return "—"
-    val minutes = TimeUnit.MILLISECONDS.toMinutes(elapsed)
-    val seconds = TimeUnit.MILLISECONDS.toSeconds(elapsed) - TimeUnit.MINUTES.toSeconds(minutes)
+private fun durationOf(state: AuroraConnectionState, elapsedMillis: Long): String {
+    // Only a Connected state carries a session, and the clock flow emits zero for
+    // anything else. A session that never started reads "—" rather than a duration
+    // that would imply one did.
+    if (state !is AuroraConnectionState.Connected || elapsedMillis < 0) return "—"
+    val minutes = TimeUnit.MILLISECONDS.toMinutes(elapsedMillis)
+    val seconds = TimeUnit.MILLISECONDS.toSeconds(elapsedMillis) - TimeUnit.MINUTES.toSeconds(minutes)
     return "%02d:%02d".format(minutes, seconds)
 }
 

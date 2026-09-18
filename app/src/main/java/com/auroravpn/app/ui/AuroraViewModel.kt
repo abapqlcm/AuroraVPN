@@ -15,6 +15,7 @@ import com.whitedns.whiteaesther.service.EngineStatusStore
 import com.whitedns.whiteaesther.service.LogEntry
 import com.whitedns.whiteaesther.service.TrafficMeter
 import com.whitedns.whiteaesther.service.TrafficSample
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
@@ -67,6 +68,68 @@ class AuroraViewModel(private val wam: MainViewModel) : ViewModel() {
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5_000),
             initialValue = wam.engineStatus.value.toAurora(),
+        )
+
+    /**
+     * The session's age, ticking once a second.
+     *
+     * The clock is [EngineStatus.connectedAtMillis] -- the moment the engine itself
+     * published CONNECTED, so a session that was running before the screen was opened
+     * reads its full length and a screen that rotates does not restart it. The tick
+     * is a re-read of that timestamp, never a counter of its own: stop the session and
+     * this stops with it, because the timestamp stops existing.
+     */
+    val sessionClock: StateFlow<Long> = wam.engineStatus
+        .map { status ->
+            if (status.stage != EngineStage.CONNECTED) return@map 0L
+            status.connectedAtMillis ?: return@map 0L
+        }
+        .let { upstream ->
+            kotlinx.coroutines.flow.flow {
+                var last = -1L
+                upstream.collect { connectedAt ->
+                    if (connectedAt <= 0L) {
+                        if (last >= 0L) { last = -1L; emit(0L) }
+                        return@collect
+                    }
+                    while (true) {
+                        val now = System.currentTimeMillis()
+                        val elapsed = (now - connectedAt).coerceAtLeast(0L)
+                        if (elapsed != last) { last = elapsed; emit(elapsed) }
+                        delay(1_000L)
+                        // Re-read in case the session ended mid-wait.
+                        if (wam.engineStatus.value.stage != EngineStage.CONNECTED) {
+                            last = -1L; emit(0L); break
+                        }
+                    }
+                }
+            }.stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.WhileSubscribed(5_000),
+                initialValue = 0L,
+            )
+        }
+
+    /**
+     * The endpoint the session is actually using, when the engine publishes one.
+     *
+     * CONNECTED carries the peer [PreparedEngine] returned, which is the address the
+     * engine dialled -- a real value, read at connect time. The CONNECTING and
+     * PREPARING stages carry it too, so the address is known from the moment the
+     * engine chose it rather than only once the tunnel is fully up.
+     *
+     * Nothing here survives across sessions and nothing is cached: on IDLE the field
+     * is empty, and no value from an earlier session is shown as though it were live.
+     */
+    val activeEndpoint: StateFlow<String> = wam.engineStatus
+        .map { status ->
+            if (status.stage == EngineStage.IDLE) return@map ""
+            status.peer.orEmpty()
+        }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5_000),
+            initialValue = wam.engineStatus.value.peer.orEmpty(),
         )
 
     /** Whether the big button does anything right now. */

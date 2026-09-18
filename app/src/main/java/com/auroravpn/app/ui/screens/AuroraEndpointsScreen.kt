@@ -17,9 +17,11 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -162,10 +164,21 @@ private fun EndpointRow(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            Column(modifier = Modifier.padding(end = 16.dp)) {
-                Text(text = peer, style = MaterialTheme.typography.bodyLarge)
+            // The address is the thing people came here to read, and it can be a
+            // long IPv6 literal: it takes whatever width is left after the RTT,
+            // not whatever is left after the RTT has been squeezed onto its own
+            // line. An address measured without a weight is what wrapped a
+            // character at a time on narrow screens.
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = peer,
+                    style = MaterialTheme.typography.bodyLarge,
+                    maxLines = 1,
+                    overflow = TextOverflow.Visible,
+                    softWrap = false,
+                )
                 if (isSelected) {
                     Text(
                         text = "Selected",
@@ -178,6 +191,12 @@ private fun EndpointRow(
                 text = if (rttMillis >= 0) "${rttMillis}ms" else "unreachable",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+                // Reserved first, so a wide address cannot push the latency
+                // reading off the edge. The widest thing a scan reports is
+                // four digits plus the unit; anything longer is not a latency.
+                modifier = Modifier.padding(start = 16.dp),
+                maxLines = 1,
+                softWrap = false,
             )
         }
     }

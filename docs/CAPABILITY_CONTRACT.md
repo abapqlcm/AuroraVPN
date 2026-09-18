@@ -137,3 +137,15 @@ Every state the UI reads comes from one of: `EngineStatusStore.status`,
 `psiphonRegions`, `bridgesMessage`, `identityMessage`, `update`), or
 `NativeAetherBridge.versionOrNull()`. **No UI holds its own connection, traffic, or
 endpoint state.**
+
+### Phase 2.1 — where the Home readouts come from
+
+| Readout | Source | Why this one |
+|---|---|---|
+| Endpoint | `EngineStatusStore.status.value.peer` | The peer `PreparedEngine` returned — the address the engine actually dialled, published by the service in `reportConnected`. Read for every non-IDLE stage, so it appears as soon as the engine chooses it, and dropped the moment a session ends. Nothing is cached between sessions. |
+| Session duration | `EngineStatusStore.status.value.connectedAtMillis` | The wall clock at the moment the service published CONNECTED. The UI re-reads it once a second; there is no independent counter, so a session that predates the screen reads its full length and a stopped session stops the clock with it. |
+| Traffic | `TrafficMeter.sample` | Unchanged. Byte counts that begin when the service starts the meter, not when a screen opens. |
+
+When the engine has not published a peer, the field is absent — not filled with a
+guessed value. "Endpoint unknown" was removed, because the word was presented as a
+reading when nothing had been measured.
