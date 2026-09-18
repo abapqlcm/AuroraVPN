@@ -111,8 +111,8 @@ jobs:
           jar tf "$apk" | grep -F "lib/${abi}/libtor.so"
           jar tf "$apk" | grep -F "lib/${abi}/liblyrebird.so"
           jar tf "$apk" | grep -F "lib/${abi}/libsnowflake.so"
-          test "$(jar tf "$apk" | grep -c '^lib/.*/libwhiteaesther_core\\.so$')" -eq 1
-          ! jar tf "$apk" | grep -E 'lib(quiche|boringtun.*)\\.so'
+          test "$(jar tf "$apk" | grep -c '^lib/.*/libwhiteaesther_core\.so$')" -eq 1
+          ! jar tf "$apk" | grep -E 'lib(quiche|boringtun.*)\.so'
           # arm64-v8a is the only architecture this build ships. The other
           # ABIs are still built by the native toolchains; they just do not
           # land in this APK, and none of them may be packaged here.
@@ -127,9 +127,9 @@ jobs:
           jar tf "$universal" | grep -F "lib/${abi}/libwhiteaesther_core.so"
           ! jar tf "$universal" | grep -E '^lib/(armeabi-v7a|x86|x86_64)/'
           for lib in libwhiteaesther_core libwhiteaestherchain libgojni libtor liblyrebird libsnowflake; do
-            test "$(jar tf "$universal" | grep -c "^lib/.*/${lib}\\.so$")" -eq 1
+            test "$(jar tf "$universal" | grep -c "^lib/.*/${lib}\.so$")" -eq 1
           done
-          ! jar tf "$universal" | grep -E 'lib(quiche|boringtun.*)\\.so'
+          ! jar tf "$universal" | grep -E 'lib(quiche|boringtun.*)\.so'
 
       - name: Upload preview APK and reports
         uses: actions/upload-artifact@v7
