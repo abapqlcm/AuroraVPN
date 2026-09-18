@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="aurora_home">خانه</string>
+    <string name="aurora_routes">مسیرها</string>
+    <string name="aurora_endpoints">اندپوینت‌ها</string>
+    <string name="aurora_transport">ترانسپورت</string>
+    <string name="aurora_more">بیشتر</string>
+    <string name="aurora_identity">هویت</string>
+    <string name="aurora_diagnostics">عیب‌یابی</string>
+    <string name="aurora_logs">لاگ‌ها</string>
+    <string name="aurora_settings">تنظیمات</string>
+    <string name="aurora_carrier">کریر و چین</string>
+
+    <string name="aurora_connect">اتصال</string>
+    <string name="aurora_disconnect">قطع اتصال</string>
+    <string name="aurora_raw_functional_note">نسخهٔ خام عملکردی — Network Orbit بعداً می‌آید</string>
+</resources>

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The Raw Functional UI. Plain labels, because this phase is about wiring. -->
+    <string name="aurora_home">Home</string>
+    <string name="aurora_routes">Routes</string>
+    <string name="aurora_endpoints">Endpoints</string>
+    <string name="aurora_transport">Transport</string>
+    <string name="aurora_more">More</string>
+    <string name="aurora_identity">Identity</string>
+    <string name="aurora_diagnostics">Diagnostics</string>
+    <string name="aurora_logs">Logs</string>
+    <string name="aurora_settings">Settings</string>
+    <string name="aurora_carrier">Carrier &amp; Chain</string>
+
+    <string name="aurora_connect">Connect</string>
+    <string name="aurora_disconnect">Disconnect</string>
+    <string name="aurora_raw_functional_note">Raw functional build — Network Orbit comes later</string>
+</resources>

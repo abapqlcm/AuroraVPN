@@ -41,7 +41,7 @@ class TunnelProtocolTest {
         // Manual, rather than something a friendly-sounding preset does for you.
         // Automatic is fine here: it only ever resolves to a MASQUE framing.
         assertTrue(
-            com.whitedns.whiteaesther.ui.ConnectionProfile.entries
+            com.whitedns.whiteaesther.data.ConnectionProfile.entries
                 .none { it.transport?.endpointFamily == EndpointFamily.WARP },
         )
     }

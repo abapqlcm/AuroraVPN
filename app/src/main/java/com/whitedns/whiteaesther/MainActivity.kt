@@ -35,12 +35,23 @@ import com.whitedns.whiteaesther.service.EngineStage
 import com.whitedns.whiteaesther.service.EngineStatus
 import com.whitedns.whiteaesther.service.EngineLog
 import com.whitedns.whiteaesther.service.EngineStatusStore
-import com.whitedns.whiteaesther.ui.WhiteAestherApp
 import com.whitedns.whiteaesther.ui.TvUiPolicy
 import com.whitedns.whiteaesther.ui.theme.WhiteAestherTheme
+import com.auroravpn.app.ui.AuroraApp
+import com.auroravpn.app.ui.AuroraViewModel
 
 class MainActivity : ComponentActivity() {
     private val viewModel by viewModels<MainViewModel>()
+
+    /**
+     * The Aurora surface, wrapped around the WAM view model.
+     *
+     * One instance for the activity's life. The flows underneath survive recreation, so
+     * re-collecting them after a rotation picks up where the screen left off.
+     */
+    private val auroraViewModel by viewModels<AuroraViewModel>(factoryProducer = {
+        AuroraViewModel.Factory(application)
+    })
 
     /**
      * The language this activity was built in.
@@ -253,57 +264,12 @@ class MainActivity : ComponentActivity() {
                 }
             }
             WhiteAestherTheme(themeMode = settings.themeMode) {
-                WhiteAestherApp(
-                    settings = settings,
-                    engineStatus = viewModel.engineStatus.collectAsStateWithLifecycle().value,
-                    endpointScannerState = viewModel.endpointScannerState.collectAsStateWithLifecycle().value,
-                    chainState = viewModel.chainState.collectAsStateWithLifecycle().value,
-                    nativeVersion = com.whitedns.whiteaesther.core.NativeAetherBridge.versionOrNull(),
-                    logEntries = EngineLog.entries.collectAsStateWithLifecycle().value,
-                    onSettingsChange = viewModel::save,
+                AuroraApp(
+                    viewModel = auroraViewModel,
                     onConnect = ::requestConnection,
-                    onStop = { AetherVpnService.stop(this) },
-                    onScanEndpoints = viewModel::scanEndpoints,
-                    onTestEndpoint = viewModel::testEndpoint,
-                    onResetEndpoint = viewModel::resetEndpoint,
-                    onFetchBridges = { country -> viewModel.fetchBridges(settings, country) },
-                    bridgesFetching = viewModel.bridgesFetching.collectAsStateWithLifecycle().value,
-                    bridgesMessage = viewModel.bridgesMessage.collectAsStateWithLifecycle().value,
-                    psiphonRegions = viewModel.psiphonRegions.collectAsStateWithLifecycle().value,
-                    detectedCountry = remember { viewModel.detectedCountry() },
-                    onCancelEndpointScan = viewModel::cancelEndpointScan,
-                    onRefreshChainNodes = { viewModel.refreshChainNodes(settings) },
-                    onSelectChainNode = { node -> viewModel.selectChainNode(settings, node) },
-                    onTestChainNodes = { viewModel.testChainNodes() },
-                    onTestChainNodesSelected = { viewModel.testChainNodes(it) },
-                    onCancelChainTests = viewModel::cancelChainTests,
-                    identityMessage = viewModel.identityMessage.collectAsStateWithLifecycle().value,
-                    onExportIdentity = ::exportIdentity,
-                    onImportIdentity = {
-                        // Any type: pickers vary in whether they know .toml, and
-                        // a file the user cannot select is worse than one the
-                        // engine rejects with a reason.
-                        val type = arrayOf("*/*")
-                        val intent = ActivityResultContracts.OpenDocument().createIntent(this, type)
-                        if (intent.resolveActivity(packageManager) == null) {
-                            explainUnavailable(getString(R.string.err_no_file_picker))
-                        } else {
-                            identityImportSource.launch(type)
-                        }
-                    },
-                    onShareReport = ::shareReport,
-                    onCopyReport = ::copyReport,
+                    onDisconnect = { AetherVpnService.stop(this) },
                     onClearLog = EngineLog::clear,
-                    addresses = viewModel.addresses.collectAsStateWithLifecycle().value,
-                    traffic = viewModel.traffic.collectAsStateWithLifecycle().value,
-                    update = viewModel.update.collectAsStateWithLifecycle().value,
-                    onLiftBlock = { AetherVpnService.liftBlock(this) },
-                    onOpenUpdate = ::openReleasePage,
-                    onDismissUpdate = viewModel::dismissUpdate,
-                    batteryExempt = batteryExempt,
-                    onRequestBatteryExemption = ::requestBatteryExemption,
-                    onOpenAppSettings = ::openAppSettings,
-                    onAddTile = ::offerQuickSettingsTile,
+                    onShareLog = { shareReport(buildLogReport()) },
                 )
             }
         }
@@ -352,6 +318,13 @@ class MainActivity : ComponentActivity() {
     }
 
     /** Hands the report to the system share sheet -- the user picks where it goes. */
+
+    /** The log buffer as text, for the share sheet. */
+    private fun buildLogReport(): String =
+        EngineLog.entries.value.joinToString("\n") { entry ->
+            "${entry.formattedTime()} ${entry.level} ${entry.tag} ${entry.message}"
+        }
+
     private fun shareReport(report: String) {
         val intent = Intent(Intent.ACTION_SEND).apply {
             type = "text/plain"

@@ -232,6 +232,9 @@ dependencies {
     implementation("androidx.compose.ui:ui-tooling-preview:1.11.4")
     implementation("androidx.compose.foundation:foundation:1.11.4")
     implementation("androidx.compose.material3:material3:1.4.0")
+    // Compose Navigation. Needed for the Aurora screen stack; the version is the
+    // one Activity Compose 1.13 and Lifecycle 2.10 expect in this build.
+    implementation("androidx.navigation:navigation-compose:2.9.5")
 
     debugImplementation("androidx.compose.ui:ui-tooling:1.11.4")
     debugImplementation("androidx.compose.ui:ui-test-manifest:1.11.4")
