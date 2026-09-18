@@ -9,15 +9,20 @@ import javax.inject.Inject
 /**
  * Which architectures this build carries.
  *
- * All three unless asked otherwise. `-PWHITEAESTHER_ABIS=x86_64` narrows it,
- * which exists for one reason: the native side is a Rust core plus two Go
- * engines, and building all three architectures of that takes minutes that a
- * change being tried on one emulator does not need to spend. Release builds
- * pass nothing and get everything, so this cannot quietly ship a partial APK.
+ * Release and CI ship arm64-v8a only, and that is the only ABI this project's
+ * Android builds carry at all: v7a and x86_64 split the native engines three
+ * ways for a downloadable artifact nobody can use on the phone they are
+ * holding, and tripled the artifact a metered connection has to fetch.
+ *
+ * `-PWHITEAESTHER_ABIS=x86_64` still narrows it further for a change being
+ * tried on one emulator, and the default here is what a release receives. The
+ * native sources are untouched by this -- every engine still builds for every
+ * architecture its own build script targets, and ABI filtering only decides
+ * which of them land in this APK.
  */
 val androidAbis = providers.gradleProperty("WHITEAESTHER_ABIS")
     .map { asked -> asked.split(",").map(String::trim).filter(String::isNotEmpty) }
-    .orElse(listOf("armeabi-v7a", "arm64-v8a", "x86_64"))
+    .orElse(listOf("arm64-v8a"))
     .get()
 val appVersionCode = providers.gradleProperty("WHITEAESTHER_VERSION_CODE").orElse("1").map { it.toInt() }
 

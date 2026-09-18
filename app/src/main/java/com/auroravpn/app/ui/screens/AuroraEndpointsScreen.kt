@@ -21,7 +21,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -166,35 +168,42 @@ private fun EndpointRow(
                 .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            // The address is the thing people came here to read, and it can be a
-            // long IPv6 literal: it takes whatever width is left after the RTT,
-            // not whatever is left after the RTT has been squeezed onto its own
-            // line. An address measured without a weight is what wrapped a
-            // character at a time on narrow screens.
+            // The address owns everything the latency reading does not need, and
+            // a long one ends in an ellipsis rather than pushing the RTT off the
+            // card. Sizing it with softWrap=false and Visible overflow -- the
+            // earlier attempt -- makes the text lay out at its intrinsic width
+            // and draw past its own box, which is what rendered the two columns
+            // on top of each other.
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = peer,
                     style = MaterialTheme.typography.bodyLarge,
                     maxLines = 1,
-                    overflow = TextOverflow.Visible,
-                    softWrap = false,
+                    overflow = TextOverflow.Ellipsis,
+                    softWrap = true,
+                    textAlign = TextAlign.Start,
                 )
                 if (isSelected) {
                     Text(
                         text = "Selected",
                         style = customLabelStyle(),
                         color = MaterialTheme.colorScheme.primary,
+                        maxLines = 1,
                     )
                 }
             }
+            // Reserved before the address is measured, so a wide address can
+            // never crowd it. The longest thing a scan reports is four digits
+            // plus the unit; 56dp holds that with room to spare on any screen.
             Text(
                 text = if (rttMillis >= 0) "${rttMillis}ms" else "unreachable",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                // Reserved first, so a wide address cannot push the latency
-                // reading off the edge. The widest thing a scan reports is
-                // four digits plus the unit; anything longer is not a latency.
-                modifier = Modifier.padding(start = 16.dp),
+                textAlign = TextAlign.End,
+                modifier = Modifier
+                    .padding(start = 16.dp)
+                    .widthIn(min = 48.dp)
+                    .align(Alignment.CenterVertically),
                 maxLines = 1,
                 softWrap = false,
             )

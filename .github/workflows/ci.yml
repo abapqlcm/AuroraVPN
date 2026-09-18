@@ -89,45 +89,47 @@ jobs:
           assemblePreviewDebug
           assemblePreviewDebugAndroidTest
 
-      - name: Verify split APKs, universal APK and VPN manifest
+      - name: Verify arm64 APK and VPN manifest
         shell: bash
         run: |
           set -euo pipefail
           apk_dir="app/build/outputs/apk/preview/debug"
-          for abi in armeabi-v7a arm64-v8a x86_64; do
-            apk="${apk_dir}/app-preview-${abi}-debug.apk"
-            test -f "$apk"
-            jar tf "$apk" | grep -F "lib/${abi}/libwhiteaesther_core.so"
-            # The Psiphon carrier, both halves of it. The tunnel core is a
-            # native library that has to match the ABI, and the server list is
-            # an asset a fetch step can silently skip -- either one missing is
-            # a carrier that cannot start on a phone that has already installed
-            # the build.
-            jar tf "$apk" | grep -F "lib/${abi}/libgojni.so"
-            jar tf "$apk" | grep -qF "assets/psiphon_server_entries.txt"
-            # The chain engine, without which nothing but Aether alone can
-            # connect, and Tor with both of its transports.
-            jar tf "$apk" | grep -F "lib/${abi}/libwhiteaestherchain.so"
-            jar tf "$apk" | grep -F "lib/${abi}/libtor.so"
-            jar tf "$apk" | grep -F "lib/${abi}/liblyrebird.so"
-            jar tf "$apk" | grep -F "lib/${abi}/libsnowflake.so"
-            test "$(jar tf "$apk" | grep -c '^lib/.*/libwhiteaesther_core\.so$')" -eq 1
-            ! jar tf "$apk" | grep -E 'lib(quiche|boringtun.*)\.so'
-            "${ANDROID_HOME}/build-tools/${ANDROID_BUILD_TOOLS}/aapt2" \
-              dump xmltree --file AndroidManifest.xml "$apk" | grep -F 'AetherVpnService'
-          done
+          abi="arm64-v8a"
+          apk="${apk_dir}/app-preview-${abi}-debug.apk"
+          test -f "$apk"
+          jar tf "$apk" | grep -F "lib/${abi}/libwhiteaesther_core.so"
+          # The Psiphon carrier, both halves of it. The tunnel core is a
+          # native library that has to match the ABI, and the server list is
+          # an asset a fetch step can silently skip -- either one missing is
+          # a carrier that cannot start on a phone that has already installed
+          # the build.
+          jar tf "$apk" | grep -F "lib/${abi}/libgojni.so"
+          jar tf "$apk" | grep -qF "assets/psiphon_server_entries.txt"
+          # The chain engine, without which nothing but Aether alone can
+          # connect, and Tor with both of its transports.
+          jar tf "$apk" | grep -F "lib/${abi}/libwhiteaestherchain.so"
+          jar tf "$apk" | grep -F "lib/${abi}/libtor.so"
+          jar tf "$apk" | grep -F "lib/${abi}/liblyrebird.so"
+          jar tf "$apk" | grep -F "lib/${abi}/libsnowflake.so"
+          test "$(jar tf "$apk" | grep -c '^lib/.*/libwhiteaesther_core\\.so$')" -eq 1
+          ! jar tf "$apk" | grep -E 'lib(quiche|boringtun.*)\\.so'
+          # arm64-v8a is the only architecture this build ships. The other
+          # ABIs are still built by the native toolchains; they just do not
+          # land in this APK, and none of them may be packaged here.
+          ! jar tf "$apk" | grep -E '^lib/(armeabi-v7a|x86|x86_64)/'
+          "${ANDROID_HOME}/build-tools/${ANDROID_BUILD_TOOLS}/aapt2" \
+            dump xmltree --file AndroidManifest.xml "$apk" | grep -F 'AetherVpnService'
 
+          # The universal APK carries the same set, and is the one people take
+          # when they are not sure which phone they have.
           universal="${apk_dir}/app-preview-universal-debug.apk"
           test -f "$universal"
-          for abi in armeabi-v7a arm64-v8a x86_64; do
-            jar tf "$universal" | grep -F "lib/${abi}/libwhiteaesther_core.so"
-          done
-          # Every engine, once per ABI: the universal APK is the one people
-          # take when they are not sure which phone they have.
+          jar tf "$universal" | grep -F "lib/${abi}/libwhiteaesther_core.so"
+          ! jar tf "$universal" | grep -E '^lib/(armeabi-v7a|x86|x86_64)/'
           for lib in libwhiteaesther_core libwhiteaestherchain libgojni libtor liblyrebird libsnowflake; do
-            test "$(jar tf "$universal" | grep -c "^lib/.*/${lib}\.so$")" -eq 3
+            test "$(jar tf "$universal" | grep -c "^lib/.*/${lib}\\.so$")" -eq 1
           done
-          ! jar tf "$universal" | grep -E 'lib(quiche|boringtun.*)\.so'
+          ! jar tf "$universal" | grep -E 'lib(quiche|boringtun.*)\\.so'
 
       - name: Upload preview APK and reports
         uses: actions/upload-artifact@v7

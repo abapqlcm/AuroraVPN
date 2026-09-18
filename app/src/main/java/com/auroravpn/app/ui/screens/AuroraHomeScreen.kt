@@ -128,8 +128,8 @@ private fun ConnectionCard(
                         text = "Endpoint: $activeEndpoint",
                         style = MaterialTheme.typography.bodyMedium,
                         maxLines = 1,
-                        overflow = TextOverflow.Visible,
-                        softWrap = false,
+                        overflow = TextOverflow.Ellipsis,
+                        softWrap = true,
                     )
                 }
             }
@@ -271,10 +271,10 @@ private fun SessionRow(label: String, value: String) {
             value,
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = androidx.compose.ui.text.style.TextAlign.End,
+            textAlign = TextAlign.End,
             maxLines = 1,
-            overflow = TextOverflow.Visible,
-            softWrap = false,
+            overflow = TextOverflow.Ellipsis,
+            softWrap = true,
             modifier = Modifier.weight(1f),
         )
     }
