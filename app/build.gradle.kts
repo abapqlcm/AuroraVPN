@@ -146,6 +146,11 @@ dependencies {
  * cargo-ndk handles the NDK compiler and sysroot plumbing; the CMake and Ninja
  * that boring-sys (BoringSSL) needs come from the Android SDK's own copies
  * rather than a separate system install.
+ *
+ * --locked is deliberately not passed. The bridge's Cargo.lock is vendored from
+ * the reference build, but the patch on boring-sys and the removed chain
+ * modules change the graph, so cargo needs to rewrite it. Passing --locked
+ * fails the build on that instead of building.
  */
 fun registerCargoNdkTask(name: String, release: Boolean) = tasks.register<Exec>(name) {
   val outputVariant = if (release) "release" else "debug"
@@ -175,7 +180,6 @@ fun registerCargoNdkTask(name: String, release: Boolean) = tasks.register<Exec>(
           "-o",
           outputDir.get().asFile.absolutePath,
           "build",
-          "--locked",
         ),
       )
       if (release) add("--release")
