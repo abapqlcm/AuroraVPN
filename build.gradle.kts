@@ -1,8 +1,10 @@
-// Top-level build file. Plugins are declared here and applied per-module so a
-// change to the toolchain version lands in one place.
 plugins {
-  alias(libs.plugins.android.application) apply false
-  alias(libs.plugins.kotlin.android) apply false
-  alias(libs.plugins.kotlin.compose) apply false
-  alias(libs.plugins.kotlin.serialization) apply false
+    id("com.android.application") version "9.4.0" apply false
+    id("org.jetbrains.kotlin.plugin.compose") version "2.4.20" apply false
+}
+
+buildscript {
+    dependencies {
+        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:2.4.20")
+    }
 }

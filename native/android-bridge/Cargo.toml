@@ -1,12 +1,12 @@
 [package]
-name = "auroravpn-android"
+name = "whiteaesther-android"
 version = "0.1.0"
 edition = "2021"
 rust-version = "1.88"
 license = "AGPL-3.0-only"
 
 [lib]
-name = "auroravpn_core"
+name = "whiteaesther_core"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]

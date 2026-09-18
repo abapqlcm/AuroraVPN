@@ -1,0 +1,31 @@
+<resources>
+    <!--
+      Not shrunk, which took two tries to get right.
+
+      The scale was cut to 0.88 and then 0.94 while Persian was being drawn by a
+      substituted face, so the shrinking was compensating for a missing font
+      rather than for the script. With Vazirmatn in place there is nothing left
+      to compensate for, and the direction was wrong anyway: Persian is if
+      anything harder to read small than Latin, because what separates two
+      letters is often a single dot.
+    -->
+    <integer name="type_scale_percent">100</integer>
+
+    <!--
+      More room between lines. Persian carries dots below the baseline and loops
+      above it, so lines set at a ratio that is comfortable for Inter crowd into
+      each other.
+    -->
+    <integer name="type_leading_percent">122</integer>
+
+    <!--
+      No negative tracking: Persian letters join, and closing the space between
+      them fights the joins rather than tidying the spacing.
+    -->
+    <integer name="type_tracking_percent">0</integer>
+
+    <!--
+      Vazirmatn, which has Persian in it. Inter does not.
+    -->
+    <bool name="type_persian_face">true</bool>
+</resources>

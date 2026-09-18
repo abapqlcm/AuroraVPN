@@ -34,7 +34,7 @@ mod platform {
 
             let reader_cancelled = cancelled.clone();
             let reader = thread::Builder::new()
-                .name("auroravpn-tun-read".into())
+                .name("whiteaesther-tun-read".into())
                 .spawn(move || {
                     let mut tun = reader_file;
                     let mut buffer = vec![0_u8; 65_535];
@@ -60,7 +60,7 @@ mod platform {
 
             let writer_cancelled = cancelled.clone();
             let writer = match thread::Builder::new()
-                .name("auroravpn-tun-write".into())
+                .name("whiteaesther-tun-write".into())
                 .spawn(move || {
                     let mut tun = writer_file;
                     while let Some(packet) = tunnel_packets.blocking_recv() {

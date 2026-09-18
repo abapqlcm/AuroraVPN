@@ -1,87 +1,197 @@
 <div align="center">
 
-# AuroraVPN
+# WhiteAestherMobile
 
-**A censorship-circumvention client for Android, powered by the [Aether](https://github.com/CluvexStudio/Aether) engine.**
+**Android client for the Aether encrypted route engine.**
+Finds a working path out of restrictive networks and carries your traffic through it.
 
-Built from scratch around the Aether core compiled as a JNI library — the engine
-lives inside the app rather than being spawned as a subprocess, which is what
-keeps it running on modern Android.
-
-[![CI](https://img.shields.io/github/actions/workflow/status/abapqlcm/AuroraVPN/ci.yml?branch=main&style=flat-square&label=CI)](https://github.com/abapqlcm/AuroraVPN/actions/workflows/ci.yml)
-[![License](https://img.shields.io/github/license/abapqlcm/AuroraVPN?style=flat-square&color=34d1a6)](LICENSE)
+[![Release](https://img.shields.io/github/v/release/WhiteDNS/WhiteAestherMobile?style=flat-square&color=34d1a6)](https://github.com/WhiteDNS/WhiteAestherMobile/releases/latest)
+[![CI](https://img.shields.io/github/actions/workflow/status/WhiteDNS/WhiteAestherMobile/ci.yml?branch=main&style=flat-square&label=CI)](https://github.com/WhiteDNS/WhiteAestherMobile/actions/workflows/ci.yml)
+[![Licence](https://img.shields.io/badge/licence-AGPL--3.0-blue?style=flat-square)](LICENSE)
 [![Android](https://img.shields.io/badge/Android-8.0%2B-3ddc84?style=flat-square&logo=android&logoColor=white)](#requirements)
-[![Phase](https://img.shields.io/badge/phase-1%20skeleton-FFD700?style=flat-square)](#roadmap)
 
 </div>
 
----
+<!-- SCREENSHOTS -->
 
-> **وضعیت:** این پروژه در مرحلهٔ اول توسعه است. هنوز موتور اتصال به آن وصل
-> نشده — فعلاً فقط اسکلت برنامه، تنظیمات بیلد و CI کار می‌کنند. نسخهٔ قابل
-> استفاده در [راهنمای پروژه](#roadmap) مشخص است.
+## Install
 
-## Why this exists
+Grab the APK for your phone from the [latest release](https://github.com/WhiteDNS/WhiteAestherMobile/releases/latest).
 
-Aether already works in Iran — it finds a reachable Cloudflare endpoint, completes
-an authenticated MASQUE handshake, and only trusts a route once real traffic
-returns through it. What is missing is a good Android client around it. This
-project is that client, with an interface designed from scratch rather than
-inherited from a template.
+| File | Use it if |
+| --- | --- |
+| `arm64-v8a` | **Almost every phone from 2017 onward.** Start here. |
+| `armeabi-v7a` | Older or budget 32-bit devices |
+| `x86_64` | Emulators, ChromeOS |
+| `universal` | You are not sure. Works everywhere, roughly three times the size. |
+| `.aab` | Play Store submission, not for sideloading |
 
-The previous attempt at this app ran the engine as a subprocess. That approach is
-dead on modern Android: the platform refuses to execute binaries from app-private
-storage, so the tunnel could never start. This rebuild embeds the Aether core as
-a JNI library inside the APK instead, which is how
-[WhiteAestherMobile](https://github.com/WhiteDNS/WhiteAestherMobile) does it.
-
-## Architecture
-
-```
-┌─ UI (Jetpack Compose) ────────────────────────┐
-│  Status, routing, diagnostics, split tunnel   │
-├─ AuroraVpnService (Kotlin) ───────────────────┤
-│  VpnService.Builder → tun fd                  │
-├─ android-bridge (Rust JNI) ───────────────────┤
-│  fd + config → engine, callbacks back up      │
-├─ Aether core (Rust) ──────────────────────────┤
-│  MASQUE / WireGuard / Gool, endpoint scan     │
-└───────────────────────────────────────────────┘
-```
-
-The engine and the JNI bridge are vendored and left alone. Everything we write
-sits above them.
-
-## Build
+Verify what you downloaded against `SHA256SUMS` in the same release:
 
 ```bash
-git clone https://github.com/abapqlcm/AuroraVPN.git
-cd AuroraVPN
-./gradlew :app:assembleStableDebug
+sha256sum -c SHA256SUMS --ignore-missing
 ```
 
-Needs JDK 17 and Android SDK 36. CI performs the same build on every push.
+Android will warn about installing outside the Play Store. That is expected for a
+sideloaded APK.
 
-## Roadmap
+> **راهنمای فارسی:** [docs/GUIDE.fa.md](docs/GUIDE.fa.md) -- installing, first run, and what to change when a
+> network blocks the connection.
 
-| Phase | Contents | Status |
-| --- | --- | --- |
-| **1 — Skeleton** | Clean repo, Gradle toolchain, CI, installable APK | ✅ Done |
-| **2 — Engine** | Aether core + JNI bridge built into the APK | ⏳ Next |
-| **3 — Tunnel** | `VpnService`, foreground service, real connection | ⏳ |
-| **4 — Interface** | Custom UI, animations, routing, split tunnel | ⏳ |
+## First run
+
+**1. Leave Coverage on "Whole device".** Under **Traffic**, this is the default
+and what almost everyone wants — every app on the phone is carried through the
+tunnel. *Proxy only* runs a local SOCKS5 listener instead and routes nothing by
+itself; traffic only goes through it if you point an app at `127.0.0.1:1819`. If
+you pick it by accident, it looks like the app connected but did nothing.
+
+**2. Leave the profile on "Adaptive".** Under **Routes**. It balances how hard
+the engine searches against how quickly it connects. The other profiles are
+narrower:
+
+| Profile | For |
+| --- | --- |
+| **Adaptive** | Most networks. Start here. |
+| **Patchy signal** | Mobile data that keeps dropping — searches harder |
+| **Strict network** | Office or campus Wi-Fi that blocks a lot — quieter probing, slower |
+| **Manual** | You set the transport and search depth yourself |
+
+**3. Allow background running when asked.** Under **Settings**, a card appears if
+Android is still allowed to suspend the app. Without the exemption the tunnel
+drops when the screen goes off — some manufacturers are far more aggressive about
+this than others.
+
+**4. Expect the first connect to take a moment.** The engine tests real network
+paths before accepting one. If a path fails it backs off and retries, and the
+status line tells you which attempt it is on.
+
+## When it will not connect
+
+The line under the big status heading is the engine's own message, not a generic
+error. It is the first thing to read.
+
+| What you see | What it means |
+| --- | --- |
+| `... · retry 3 of 8 in 12s` | A path failed and it is trying another. Normal on a hostile network. |
+| `Could not reach Tor's bridge service` | Tap **Fetch bridges** while connected through Aether or Psiphon, or paste bridges from @GetBridgesBot. |
+| `... is looking for a way out` | A carrier is establishing. Psiphon tries many protocols at once; Tor fetches a consensus and builds a circuit. A minute is normal, and behind a bridge rather more. |
+| `Stopped after 8 attempts` | Nothing worked here. Try a different profile or network. |
+| `custom endpoint ... failed MASQUE validation` | The address you pinned is not reachable. Switch **Endpoint** back to Automatic. |
+| `Connected to a different endpoint` | Your pinned address failed and fallback substituted a working one. |
+
+Worth trying, in order: switch the profile to **Strict network**; set
+**Addresses** to *IPv4 only* under Traffic if the network handles IPv6 badly;
+turn **Obfuscation** up to *Aggressive*.
+
+Under **Settings → Diagnostics** you can raise the detail level, reproduce the
+problem, and send a report. It shows you the exact text before anything is sent,
+and replaces IP addresses with placeholders unless you turn that off.
+
+## How it works
+
+Aether probes reachable Cloudflare endpoints, completes an authenticated MASQUE
+handshake against them, and only accepts a route once real traffic returns
+through it. The app then either raises an Android `VpnService` tunnel that
+captures IPv4, IPv6 and DNS, or exposes a loopback SOCKS5 proxy.
+
+- **Carrier** — Aether by default. Under **Routes**, Psiphon or Tor can carry
+  the tunnel instead: each finds its own way out and the app routes the whole
+  device into it. Both are slower, and one of them is someone else's network, so
+  they are there for the networks Aether cannot get out of rather than as equal
+  choices. Tor carries no UDP, which the app declares rather than discovers
+- **Transports** — MASQUE over HTTP/3 (QUIC) and HTTP/2 (TLS over TCP, for
+  networks that block UDP)
+- **Obfuscation** — padding profiles that make tunnel traffic harder to
+  fingerprint
+- **Endpoints** — discovered automatically, or pinned to a specific `IP:port`
+  with optional fallback
+- **Identity** — provisioned on first connect, private key kept in app-private
+  storage, never leaves the device
+- **Exit chain** — an optional second hop after the tunnel, so sites see your
+  own node rather than Cloudflare. Nodes come from a subscription or pasted
+  links, and are dialled from inside the tunnel by default so neither your
+  network nor the node learns the other'''s address
 
 ## Requirements
 
-Android 8.0 (API 26) or newer. `arm64-v8a` is the primary target.
+Android 8.0 (API 26) or newer, on `arm64-v8a`, `armeabi-v7a` or `x86_64`.
 
-## License
+## Build from source
 
-[AGPL-3.0](LICENSE). This project embeds the Aether engine, which is AGPL-3.0, so
-the same license applies to the whole app. See `THIRD_PARTY_NOTICES.md` for the
-components and the revisions they are pinned to.
+```bash
+git clone https://github.com/WhiteDNS/WhiteAestherMobile.git
+cd WhiteAestherMobile
+./gradlew assembleStableDebug
+```
 
-## Credits
+Needs JDK 21, Android SDK 36 with NDK `29.0.14206865` and CMake 3.22.1, and Rust
+1.88.0 with the Android targets plus `cargo-ndk`. The Gradle build compiles the
+Rust bridge itself.
 
-- **[Aether](https://github.com/CluvexStudio/Aether)** by CluvexStudio — the engine this client is built on.
-- **[WhiteAestherMobile](https://github.com/WhiteDNS/WhiteAestherMobile)** by WhiteDNS — the reference for embedding Aether on Android.
+`./gradlew :app:compileStableDebugKotlin` skips the native build and is the fast
+loop when only touching Kotlin.
+
+Two things Gradle does not build for you. The exit chain's Go library, which the
+Psiphon carrier also needs to reach the interface:
+
+```powershell
+pwsh -File native/chain/setup.ps1
+pwsh -File native/chain/build.ps1
+```
+
+Psiphon's bootstrap server list, which is data rather than code and is not
+committed:
+
+```powershell
+pwsh -File native/psiphon/setup.ps1
+```
+
+and Tor's pluggable transports, which are Go programs built as Android
+executables:
+
+```powershell
+pwsh -File native/tor/setup.ps1
+pwsh -File native/tor/build.ps1
+```
+
+A build missing either still installs and runs; the feature that needs it says
+so rather than failing at connect time on somebody's phone.
+
+## Repository layout
+
+| Path | |
+| --- | --- |
+| `app/` | The Android application |
+| `native/aether/` | Vendored Aether engine |
+| `native/psiphon/` | The Psiphon carrier: what to fetch, and why it is a separate process |
+| `native/android-bridge/` | Rust JNI bridge between the two |
+| `design/` | Clickable design prototype and the notes from building it |
+| `docs/` | Release process and device test plan |
+
+`design/PORT-STATUS.md` records what was verified against the engine and what is
+still outstanding — worth reading before changing the connection UI.
+
+## Releasing
+
+CI verifies every pull request and every push to `main`. Publishing happens on
+tags alone:
+
+```bash
+git tag v1.2.3 && git push origin v1.2.3
+```
+
+That builds, tests, signs, verifies every APK, and publishes the release.
+
+## Privacy
+
+No analytics, no telemetry, no accounts. The proxy binds to loopback only,
+cleartext traffic is blocked, backups are disabled, and diagnostics reports are
+never sent without you reviewing them first. See [PRIVACY.md](PRIVACY.md).
+
+## Licence
+
+[AGPL-3.0](LICENSE), as is the Aether engine it embeds. The exit chain is built
+on mihomo, which is GPL-3.0; AGPL-3.0 section 13 permits the combination, and
+each part keeps its own licence. Components, revisions, and the one modification
+we make are listed in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

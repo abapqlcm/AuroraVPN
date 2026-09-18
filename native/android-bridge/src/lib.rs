@@ -1,5 +1,8 @@
-// tun.rs is Unix-only: it drives the TUN descriptor directly.
+// dlopen and friends are a Unix API; the host build on Windows has no chain.
 #[cfg(unix)]
+mod chain;
+#[cfg(unix)]
+mod chain_jni;
 mod tun;
 
 use std::collections::VecDeque;
@@ -454,7 +457,7 @@ fn apply_log_level(level: &str) {
 /// registrations per address -- so a few reinstalls can leave an address refused
 /// outright, which looks exactly like a broken app.
 #[no_mangle]
-pub extern "system" fn Java_com_auroravpn_app_core_NativeAetherBridge_nativeExportIdentity<
+pub extern "system" fn Java_com_whitedns_whiteaesther_core_NativeAetherBridge_nativeExportIdentity<
     'local,
 >(
     mut env: JNIEnv<'local>,
@@ -479,7 +482,7 @@ pub extern "system" fn Java_com_auroravpn_app_core_NativeAetherBridge_nativeExpo
 /// would leave the device holding an identity Cloudflare does not recognise,
 /// with the working one already gone.
 #[no_mangle]
-pub extern "system" fn Java_com_auroravpn_app_core_NativeAetherBridge_nativeImportIdentity<
+pub extern "system" fn Java_com_whitedns_whiteaesther_core_NativeAetherBridge_nativeImportIdentity<
     'local,
 >(
     mut env: JNIEnv<'local>,
@@ -511,7 +514,7 @@ pub extern "system" fn Java_com_auroravpn_app_core_NativeAetherBridge_nativeImpo
 /// Pulled rather than pushed: these arrive on the engine's own threads, and a
 /// connect attempt produces hundreds during an endpoint scan.
 #[no_mangle]
-pub extern "system" fn Java_com_auroravpn_app_core_NativeAetherBridge_nativeDrainLog<
+pub extern "system" fn Java_com_whitedns_whiteaesther_core_NativeAetherBridge_nativeDrainLog<
     'local,
 >(
     mut env: JNIEnv<'local>,
@@ -571,13 +574,13 @@ fn error_response(error: impl std::fmt::Display) -> String {
 fn runtime() -> Result<tokio::runtime::Runtime, String> {
     tokio::runtime::Builder::new_multi_thread()
         .enable_all()
-        .thread_name("auroravpn-core")
+        .thread_name("whiteaesther-core")
         .build()
         .map_err(|error| format!("failed to start native runtime: {error}"))
 }
 
 #[no_mangle]
-pub extern "system" fn Java_com_auroravpn_app_core_NativeAetherBridge_nativeVersion(
+pub extern "system" fn Java_com_whitedns_whiteaesther_core_NativeAetherBridge_nativeVersion(
     env: JNIEnv<'_>,
     _class: JClass<'_>,
 ) -> jstring {
@@ -592,7 +595,7 @@ pub extern "system" fn Java_com_auroravpn_app_core_NativeAetherBridge_nativeVers
 }
 
 #[no_mangle]
-pub extern "system" fn Java_com_auroravpn_app_core_NativeAetherBridge_validateConfig(
+pub extern "system" fn Java_com_whitedns_whiteaesther_core_NativeAetherBridge_validateConfig(
     mut env: JNIEnv<'_>,
     _class: JClass<'_>,
     config: JString<'_>,
@@ -616,7 +619,7 @@ pub extern "system" fn Java_com_auroravpn_app_core_NativeAetherBridge_validateCo
 }
 
 #[no_mangle]
-pub extern "system" fn Java_com_auroravpn_app_core_NativeAetherBridge_nativePrepare(
+pub extern "system" fn Java_com_whitedns_whiteaesther_core_NativeAetherBridge_nativePrepare(
     mut env: JNIEnv<'_>,
     _class: JClass<'_>,
     config: JString<'_>,
@@ -687,7 +690,7 @@ pub extern "system" fn Java_com_auroravpn_app_core_NativeAetherBridge_nativePrep
 /// ends either. Refused while the engine is running, because an engine that is
 /// running has whatever identity it needed.
 #[no_mangle]
-pub extern "system" fn Java_com_auroravpn_app_core_NativeAetherBridge_nativeProvision(
+pub extern "system" fn Java_com_whitedns_whiteaesther_core_NativeAetherBridge_nativeProvision(
     mut env: JNIEnv<'_>,
     _class: JClass<'_>,
     config: JString<'_>,
@@ -730,7 +733,7 @@ pub extern "system" fn Java_com_auroravpn_app_core_NativeAetherBridge_nativeProv
 }
 
 #[no_mangle]
-pub extern "system" fn Java_com_auroravpn_app_core_NativeAetherBridge_nativeScan(
+pub extern "system" fn Java_com_whitedns_whiteaesther_core_NativeAetherBridge_nativeScan(
     mut env: JNIEnv<'_>,
     _class: JClass<'_>,
     config: JString<'_>,
@@ -777,7 +780,7 @@ pub extern "system" fn Java_com_auroravpn_app_core_NativeAetherBridge_nativeScan
 }
 
 #[no_mangle]
-pub extern "system" fn Java_com_auroravpn_app_core_NativeAetherBridge_nativeTestEndpoint(
+pub extern "system" fn Java_com_whitedns_whiteaesther_core_NativeAetherBridge_nativeTestEndpoint(
     mut env: JNIEnv<'_>,
     _class: JClass<'_>,
     config: JString<'_>,
@@ -809,7 +812,7 @@ pub extern "system" fn Java_com_auroravpn_app_core_NativeAetherBridge_nativeTest
 }
 
 #[no_mangle]
-pub extern "system" fn Java_com_auroravpn_app_core_NativeAetherBridge_nativeCancelScan(
+pub extern "system" fn Java_com_whitedns_whiteaesther_core_NativeAetherBridge_nativeCancelScan(
     _env: JNIEnv<'_>,
     _class: JClass<'_>,
 ) -> jboolean {
@@ -827,7 +830,7 @@ pub extern "system" fn Java_com_auroravpn_app_core_NativeAetherBridge_nativeCanc
 /// belongs to the standalone endpoint search, and never reached the
 /// provisioning and peer selection that prepare does before a session starts.
 #[no_mangle]
-pub extern "system" fn Java_com_auroravpn_app_core_NativeAetherBridge_nativeCancelPrepare(
+pub extern "system" fn Java_com_whitedns_whiteaesther_core_NativeAetherBridge_nativeCancelPrepare(
     _env: JNIEnv<'_>,
     _class: JClass<'_>,
 ) -> jboolean {
@@ -840,7 +843,7 @@ pub extern "system" fn Java_com_auroravpn_app_core_NativeAetherBridge_nativeCanc
 }
 
 #[no_mangle]
-pub extern "system" fn Java_com_auroravpn_app_core_NativeAetherBridge_nativeRun(
+pub extern "system" fn Java_com_whitedns_whiteaesther_core_NativeAetherBridge_nativeRun(
     mut env: JNIEnv<'_>,
     _class: JClass<'_>,
     config: JString<'_>,
@@ -933,7 +936,7 @@ pub extern "system" fn Java_com_auroravpn_app_core_NativeAetherBridge_nativeRun(
 }
 
 #[no_mangle]
-pub extern "system" fn Java_com_auroravpn_app_core_NativeAetherBridge_nativeStop(
+pub extern "system" fn Java_com_whitedns_whiteaesther_core_NativeAetherBridge_nativeStop(
     _env: JNIEnv<'_>,
     _class: JClass<'_>,
 ) -> jboolean {
@@ -948,7 +951,7 @@ pub extern "system" fn Java_com_auroravpn_app_core_NativeAetherBridge_nativeStop
 }
 
 #[no_mangle]
-pub extern "system" fn Java_com_auroravpn_app_core_NativeAetherBridge_nativeSetSocketProtector(
+pub extern "system" fn Java_com_whitedns_whiteaesther_core_NativeAetherBridge_nativeSetSocketProtector(
     mut env: JNIEnv<'_>,
     _class: JClass<'_>,
     protector: JObject<'_>,

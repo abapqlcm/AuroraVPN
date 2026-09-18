@@ -1,5 +1,10 @@
 name: CI
+run-name: CI on ${{ github.head_ref || github.ref_name }}
 
+# Verification only. Nothing here signs anything or publishes a release --
+# that is release.yml, and it runs on tags alone. A push to main used to
+# trigger a full signed build and a rolling prerelease, which is why every
+# commit produced two long runs and a new release.
 on:
   pull_request:
   push:
@@ -7,6 +12,8 @@ on:
     paths-ignore:
       - "**/*.md"
       - "docs/**"
+      - ".gitattributes"
+      - ".github/dependabot.yml"
   workflow_dispatch:
 
 permissions:
@@ -17,89 +24,144 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  ANDROID_NDK_VERSION: "29.0.14206865"
-  ANDROID_CMAKE_VERSION: "3.22.1"
+  ANDROID_BUILD_TOOLS: "36.0.0"
 
 jobs:
-  build:
-    name: Build and test
+  android:
+    name: Test and build preview APK
     runs-on: ubuntu-latest
-    timeout-minutes: 60
-
+    timeout-minutes: 90
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - name: Set up JDK 17
-        uses: actions/setup-java@v4
+      - uses: ./.github/actions/android-toolchain
         with:
-          distribution: temurin
-          java-version: "17"
-          cache: gradle
+          rust-components: rustfmt, clippy
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
+      - name: Check Rust formatting
+        run: |
+          cargo fmt --manifest-path native/aether/aether/Cargo.toml --check
+          cargo fmt --manifest-path native/android-bridge/Cargo.toml --check
+
+      - name: Test and lint the native bridge
+        run: |
+          cargo test --manifest-path native/android-bridge/Cargo.toml --locked
+          cargo clippy --manifest-path native/android-bridge/Cargo.toml --locked --all-targets -- -D warnings
+
+      # Psiphon's bootstrap list, which is data rather than code and is not
+      # committed. Gradle packages whatever is staged, so without this the
+      # preview APK installs with the Psiphon carrier present and unable to
+      # start -- the shape of failure that only shows up on a device.
+      # Go for the exit chain engine, the pluggable transports and the server
+      # list's signature check -- the same toolchain release.yml uses.
+      - uses: actions/setup-go@v7
         with:
-          packages: platform-tools
+          go-version: "1.25"
+          cache: false
 
-      - name: Accept licenses and install SDK
+      # The preview is the build people install to try a change, so it carries
+      # every engine a release does. It used to build none of the Go ones, and
+      # Gradle packages whatever it finds staged without complaint: every
+      # preview ran Aether alone and failed anything that goes through the
+      # chain -- Psiphon, Tor and any two-carrier path -- with "the chain
+      # library is missing", which reads like a broken app, not a test build.
+      - name: Build the exit chain engine
+        shell: pwsh
+        run: |
+          ./native/chain/setup.ps1
+          ./native/chain/build.ps1
+
+      - name: Fetch the Psiphon server list
+        shell: pwsh
+        run: ./native/psiphon/setup.ps1
+
+      - name: Build the pluggable transports
+        shell: pwsh
+        run: |
+          ./native/tor/setup.ps1
+          ./native/tor/build.ps1
+
+      - name: Test, lint and package Android
+        run: >-
+          ./gradlew
+          testPreviewDebugUnitTest
+          lintPreviewDebug
+          assemblePreviewDebug
+          assemblePreviewDebugAndroidTest
+
+      - name: Verify split APKs, universal APK and VPN manifest
         shell: bash
         run: |
-          set +o pipefail
-          yes | sdkmanager --licenses >/dev/null
-          set -o pipefail
-          sdkmanager \
-            "platforms;android-36" \
-            "build-tools;36.0.0" \
-            "platform-tools" \
-            "ndk;${{ env.ANDROID_NDK_VERSION }}" \
-            "cmake;${{ env.ANDROID_CMAKE_VERSION }}"
+          set -euo pipefail
+          apk_dir="app/build/outputs/apk/preview/debug"
+          for abi in armeabi-v7a arm64-v8a x86_64; do
+            apk="${apk_dir}/app-preview-${abi}-debug.apk"
+            test -f "$apk"
+            jar tf "$apk" | grep -F "lib/${abi}/libwhiteaesther_core.so"
+            # The Psiphon carrier, both halves of it. The tunnel core is a
+            # native library that has to match the ABI, and the server list is
+            # an asset a fetch step can silently skip -- either one missing is
+            # a carrier that cannot start on a phone that has already installed
+            # the build.
+            jar tf "$apk" | grep -F "lib/${abi}/libgojni.so"
+            jar tf "$apk" | grep -qF "assets/psiphon_server_entries.txt"
+            # The chain engine, without which nothing but Aether alone can
+            # connect, and Tor with both of its transports.
+            jar tf "$apk" | grep -F "lib/${abi}/libwhiteaestherchain.so"
+            jar tf "$apk" | grep -F "lib/${abi}/libtor.so"
+            jar tf "$apk" | grep -F "lib/${abi}/liblyrebird.so"
+            jar tf "$apk" | grep -F "lib/${abi}/libsnowflake.so"
+            test "$(jar tf "$apk" | grep -c '^lib/.*/libwhiteaesther_core\.so$')" -eq 1
+            ! jar tf "$apk" | grep -E 'lib(quiche|boringtun.*)\.so'
+            "${ANDROID_HOME}/build-tools/${ANDROID_BUILD_TOOLS}/aapt2" \
+              dump xmltree --file AndroidManifest.xml "$apk" | grep -F 'AetherVpnService'
+          done
 
-      # Aether 2.0.0 declares rust-version 1.98, and cargo refuses to build it
-      # with anything older. Pinned, not "latest", so a toolchain bump cannot
-      # silently change what the release is built with.
-      - name: Install Rust 1.98
-        uses: dtolnay/rust-toolchain@1.98.0
+          universal="${apk_dir}/app-preview-universal-debug.apk"
+          test -f "$universal"
+          for abi in armeabi-v7a arm64-v8a x86_64; do
+            jar tf "$universal" | grep -F "lib/${abi}/libwhiteaesther_core.so"
+          done
+          # Every engine, once per ABI: the universal APK is the one people
+          # take when they are not sure which phone they have.
+          for lib in libwhiteaesther_core libwhiteaestherchain libgojni libtor liblyrebird libsnowflake; do
+            test "$(jar tf "$universal" | grep -c "^lib/.*/${lib}\.so$")" -eq 3
+          done
+          ! jar tf "$universal" | grep -E 'lib(quiche|boringtun.*)\.so'
+
+      - name: Upload preview APK and reports
+        uses: actions/upload-artifact@v7
         with:
-          targets: aarch64-linux-android,armv7-linux-androideabi,x86_64-linux-android
-
-      - name: Install cargo-ndk
-        shell: bash
-        run: cargo install cargo-ndk --version 4.1.2 --locked
-
-      # BoringSSL's build needs a CMake newer than the runner's, and Ninja.
-      # The Android SDK's own copies are used rather than a system install so
-      # the build here matches a local one done from Android Studio.
-      - name: Point the build at the SDK's CMake and Ninja
-        shell: bash
-        run: |
-          echo "ANDROID_HOME=$ANDROID_HOME"
-          # The runner images ship a preinstalled NDK whose version differs
-          # from the one installed above, and ANDROID_NDK_ROOT still points at
-          # it. cargo-ndk reads ANDROID_NDK_ROOT, and the mismatch makes it
-          # pick a different toolchain than the one requested. Force both
-          # variables at the same NDK.
-          NDK="$ANDROID_HOME/ndk/${{ env.ANDROID_NDK_VERSION }}"
-          echo "ANDROID_NDK_HOME=$NDK" >> "$GITHUB_ENV"
-          echo "ANDROID_NDK_ROOT=$NDK" >> "$GITHUB_ENV"
-          CMAKE_BIN="$ANDROID_HOME/cmake/${{ env.ANDROID_CMAKE_VERSION }}/bin"
-          echo "$CMAKE_BIN" >> "$GITHUB_PATH"
-          echo "CMAKE=$CMAKE_BIN/cmake" >> "$GITHUB_ENV"
-          ls -l "$CMAKE_BIN"
-          ls -d "$ANDROID_HOME"/ndk/* || true
-
-      - name: Grant execute permission for gradlew
-        run: chmod +x gradlew
-
-      - name: Run unit tests
-        run: ./gradlew :app:testDebugUnitTest --stacktrace
-
-      - name: Build debug APK
-        run: ./gradlew :app:assembleDebug --stacktrace
-
-      - name: Upload APK artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: auroravpn-phase2-apk
-          path: app/build/outputs/apk/debug/*.apk
+          name: whiteaesther-preview
+          path: |
+            app/build/outputs/apk/preview/debug/*.apk
+            app/build/reports/tests/
+            app/build/reports/lint-results-previewDebug.html
           if-no-files-found: error
           retention-days: 14
+
+  design:
+    name: Verify design prototype
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: design/package-lock.json
+
+      - run: npm --prefix design ci
+
+      - name: Source must stay pure ASCII
+        # The published page cannot declare a charset, so a multi-byte
+        # character renders as mojibake rather than the glyph intended.
+        run: |
+          node -e "const n=[...require('fs').readFileSync('design/src.html','utf8')].filter(c=>c.codePointAt(0)>127).length; if (n) { console.error('design/src.html has ' + n + ' non-ASCII characters'); process.exit(1) }"
+
+      - name: Committed prototype must match its source
+        run: |
+          node design/build.mjs
+          git diff --exit-code -- design/index.html

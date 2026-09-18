@@ -1,21 +1,39 @@
-*.iml
 .gradle/
-.kotlin/
-local.properties
 .idea/
-.DS_Store
 build/
-app/build/
-composeApp/build/
-.externalNativeBuild/
-.cxx/
-*.jks
-*.keystore
-app/release/
-captures/
-# Rust build artifacts. Never tracked.
-native/**/target/
-# boring-sys ships its build script in build/main.rs — a Rust source file,
-# not Gradle output. A bare "build/" rule would exclude it and the engine
-# cannot compile without it.
+**/build/
 !native/third-party/boring-sys/build/
+!native/third-party/boring-sys/build/**
+**/target/
+local.properties
+*.iml
+.DS_Store
+Thumbs.db
+.preview-server.pid
+design/node_modules/
+design/frames/
+
+# Local working notes: records the signing-key backup path, never publish
+memory.md
+
+# Local helper: references the signing-key backup path, never publish
+set-signing-secrets.ps1
+native/chain/third_party/
+native/chain/build/
+
+# Bundled history of the retired WhiteAesther-Android repository. Large, local,
+# and the only surviving copy -- keep a duplicate off this drive.
+archive/
+
+# Psiphon's bootstrap server list. Fetched by native/psiphon/setup.ps1 at a
+# pinned revision and checked against a SHA-256 -- large, regenerable, and not
+# ours, which is the same reason native/chain/third_party is not committed.
+app/src/main/assets/psiphon_server_entries.txt
+native/tor/third_party/
+# psiphon-tunnel-core, cloned by native/psiphon/setup.ps1 to check the server
+# list's signatures, and the marker recording that the check passed.
+native/psiphon/third_party/
+native/tor/build/
+
+# The Kotlin compiler's per-project session and error cache.
+.kotlin/
