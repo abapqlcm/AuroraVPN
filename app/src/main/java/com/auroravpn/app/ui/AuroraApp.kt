@@ -1,39 +1,70 @@
 package com.auroravpn.app.ui
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
+import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
+import com.auroravpn.app.ui.screens.HomeScreen
+import com.auroravpn.app.ui.screens.SettingsScreen
+import com.auroravpn.app.vpn.VpnController
+
+private object Routes {
+  const val HOME = "home"
+  const val SETTINGS = "settings"
+}
 
 /**
- * Placeholder shell. The real navigation, connect control and status surface
- * arrive in phase 3 once the native engine is wired up. Keeping it deliberately
- * minimal so phase 1 stays about one thing: a green build and an installable APK.
+ * The app's navigation graph. Two destinations, no deep links, no arguments —
+ * deliberately small. The VPN controller is created here and shared by
+ * reference so the whole app sees one tunnel.
  */
 @Composable
 fun AuroraApp() {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(24.dp),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally,
+  val navController = rememberNavController()
+  val controller = remember { VpnController() }
+
+  Scaffold(
+    modifier = Modifier.fillMaxSize(),
+    containerColor = androidx.compose.ui.graphics.Color.Transparent,
+  ) { padding ->
+    NavHost(
+      navController = navController,
+      startDestination = Routes.HOME,
+      modifier = Modifier.fillMaxSize(),
+      enterTransition = {
+        slideInHorizontally(tween(280)) { it } + fadeIn(tween(280))
+      },
+      exitTransition = {
+        slideOutHorizontally(tween(280)) { -it } + fadeOut(tween(280))
+      },
+      popEnterTransition = {
+        slideInHorizontally(tween(280)) { -it } + fadeIn(tween(280))
+      },
+      popExitTransition = {
+        slideOutHorizontally(tween(280)) { it } + fadeOut(tween(280))
+      },
     ) {
-        Text(
-            text = "AuroraVPN",
-            style = MaterialTheme.typography.displayLarge,
-            color = MaterialTheme.colorScheme.primary,
+      composable(Routes.HOME) {
+        HomeScreen(
+          controller = controller,
+          onOpenSettings = { navController.navigate(Routes.SETTINGS) },
+          contentPadding = padding,
         )
-        Text(
-            text = "Phase 1 — skeleton",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onBackground,
+      }
+      composable(Routes.SETTINGS) {
+        SettingsScreen(
+          contentPadding = padding,
         )
+      }
     }
+  }
 }
