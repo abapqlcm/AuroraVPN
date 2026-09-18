@@ -46,12 +46,14 @@ fun HomeScreen(
   val state by controller.state.collectAsStateWithLifecycle()
   val error by controller.errorMessage.collectAsStateWithLifecycle()
 
-  // The sky comes alive once the tunnel is up and rests while it is down.
+  // The sky rests while the tunnel is down and comes alive once it is up.
+  // These values were measured: anything below ~0.5 reads as a flat black
+  // background on a phone screen, which is what made the first pass look dead.
   val skyIntensity = when {
     state.isProtecting -> 1f
-    state.isBusy -> 0.55f
-    state == VpnState.ERROR -> 0.35f
-    else -> 0.25f
+    state.isBusy -> 0.75f
+    state == VpnState.ERROR -> 0.5f
+    else -> 0.65f
   }
 
   Box(modifier = modifier.fillMaxSize()) {

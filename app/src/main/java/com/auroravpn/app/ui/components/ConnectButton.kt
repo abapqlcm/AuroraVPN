@@ -8,12 +8,15 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.progressSemantics
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -44,15 +47,20 @@ import kotlin.math.sin
 private const val TAU = (PI * 2).toFloat()
 
 /**
- * The main connect control: a ring whose state is the whole story.
+ * The main connect control: a drawn ring whose state is the whole story.
  *
- * Idle shows a hollow ring and the brand mark. Busy shows an indeterminate
- * sweep that never resolves — a determinate bar here would be a lie, since the
- * handshake takes however long it takes. Connected shows a complete ring with a
- * soft glow, because "you are safe now" should not look the same as "wait".
+ * Each state is drawn rather than animated with a progress composable, so the
+ * colours, arc gaps, glow layers and centre glyph all live in one place.
  *
- * The ring is drawn rather than animated with a progress composable so the
- * colours, the arc gaps and the halo are all in one place and all tuneable.
+ * - IDLE      hollow gold ring, diamond mark — the invitation to tap
+ * - busy      an indeterminate arc that rotates and breathes; a determinate
+ *             bar here would lie about a handshake of unknown length
+ * - CONNECTED a complete ring drawn in three glow layers so it reads as light
+ *             rather than as a painted circle, with a slow pulse
+ * - ERROR     red ring, cross mark
+ *
+ * A press scales the whole ring down slightly — the control has to feel like
+ * something under the finger, not a static image.
  */
 @Composable
 fun ConnectButton(
@@ -62,10 +70,12 @@ fun ConnectButton(
 ) {
   val measurer = rememberTextMeasurer()
   val infinite = rememberInfiniteTransition(label = "ring")
+  val interaction = remember { MutableInteractionSource() }
+  val pressed by interaction.collectIsPressedAsState()
 
-  // The indeterminate sweep length. Pulsing the arc's own size (rather than
-  // only rotating it) is what makes it read as working rather than as a
-  // spinner stuck on a fixed percentage.
+  // The indeterminate arc's own length. Pulsing the arc's size — not only
+  // rotating it — is what makes it read as working rather than as a fixed
+  // percentage stuck on a spinner.
   val sweep by infinite.animateFloat(
     initialValue = 0f,
     targetValue = 1f,
@@ -85,8 +95,7 @@ fun ConnectButton(
     ),
     label = "spin",
   )
-  // Connected gets a gentle pulse — the only ambient motion in the connected
-  // state, kept slow so it reads as calm rather than demanding attention.
+  // Connected ambient pulse: the only motion once up, kept slow on purpose.
   val pulse by infinite.animateFloat(
     initialValue = 0f,
     targetValue = 1f,
@@ -112,17 +121,25 @@ fun ConnectButton(
     VpnState.ERROR -> "خطا"
   }
 
+  // Pressed feedback: a small, immediate scale-down.
+  val scale = if (pressed) 0.94f else 1f
+
   Box(
     modifier = modifier
-      .size(216.dp)
+      .size(236.dp)
       .semantics { role = Role.Button }
       .progressSemantics(if (state.isProtecting) 1f else 0f)
-      .clickable(enabled = !state.isBusy, onClick = onClick),
+      .clickable(
+        interactionSource = interaction,
+        indication = null,
+        enabled = !state.isBusy,
+        onClick = onClick,
+      ),
     contentAlignment = Alignment.Center,
   ) {
     Canvas(modifier = Modifier.matchParentSize()) {
-      val stroke = 10.dp.toPx()
-      val diameter = size.minDimension - stroke
+      val stroke = 12.dp.toPx() * scale
+      val diameter = (size.minDimension - stroke * 1.4f) * scale
       val topLeft = Offset(
         (size.width - diameter) / 2f,
         (size.height - diameter) / 2f,
@@ -142,16 +159,26 @@ fun ConnectButton(
 
       when {
         state.isProtecting -> {
-          // Complete ring plus a halo that breathes with [pulse].
-          val glow = 0.30f + 0.20f * sin(pulse * TAU)
+          // Three glow layers, widest and faintest first: this is what makes a
+          // drawn ring read as emitted light instead of a painted circle.
+          val breathe = 0.5f + 0.5f * sin(pulse * TAU)
           drawArc(
-            color = gold.copy(alpha = glow),
+            color = gold.copy(alpha = 0.16f + 0.10f * breathe),
             startAngle = -90f,
             sweepAngle = 360f,
             useCenter = false,
             topLeft = topLeft,
             size = arcSize,
-            style = Stroke(width = stroke * 2.4f, cap = StrokeCap.Round),
+            style = Stroke(width = stroke * 3.2f, cap = StrokeCap.Round),
+          )
+          drawArc(
+            color = gold.copy(alpha = 0.34f + 0.18f * breathe),
+            startAngle = -90f,
+            sweepAngle = 360f,
+            useCenter = false,
+            topLeft = topLeft,
+            size = arcSize,
+            style = Stroke(width = stroke * 2.0f, cap = StrokeCap.Round),
           )
           drawArc(
             color = gold,
@@ -166,10 +193,20 @@ fun ConnectButton(
         }
 
         state.isBusy -> {
-          // An open arc that rotates. The gap is what makes it indeterminate:
-          // a full rotating ring would look like progress pretending to move.
+          // A rotating open arc. The gap is what carries "indeterminate": a
+          // full rotating ring would read as progress pretending to move.
           val start = -90f + spin * 360f
-          val sweepAngle = 110f + 50f * sin(sweep * TAU)
+          val sweepAngle = 110f + 60f * sin(sweep * TAU)
+          // Outer faint layer first for a trail of light behind the arc.
+          drawArc(
+            color = goldSoft.copy(alpha = 0.25f),
+            startAngle = start,
+            sweepAngle = sweepAngle,
+            useCenter = false,
+            topLeft = topLeft,
+            size = arcSize,
+            style = Stroke(width = stroke * 2.2f, cap = StrokeCap.Round),
+          )
           drawArc(
             color = goldSoft,
             startAngle = start,
@@ -183,6 +220,15 @@ fun ConnectButton(
 
         state == VpnState.ERROR -> {
           drawArc(
+            color = errorColor.copy(alpha = 0.30f),
+            startAngle = -90f,
+            sweepAngle = 360f,
+            useCenter = false,
+            topLeft = topLeft,
+            size = arcSize,
+            style = Stroke(width = stroke * 2.2f, cap = StrokeCap.Round),
+          )
+          drawArc(
             color = errorColor,
             startAngle = -90f,
             sweepAngle = 360f,
@@ -195,9 +241,18 @@ fun ConnectButton(
         }
 
         else -> {
-          // IDLE: hollow ring, brand mark. The invitation to tap.
+          // IDLE. Slightly brighter than the track so it reads as tappable.
           drawArc(
-            color = gold.copy(alpha = 0.55f),
+            color = gold.copy(alpha = 0.14f),
+            startAngle = -90f,
+            sweepAngle = 360f,
+            useCenter = false,
+            topLeft = topLeft,
+            size = arcSize,
+            style = Stroke(width = stroke * 2.4f, cap = StrokeCap.Round),
+          )
+          drawArc(
+            color = gold.copy(alpha = 0.75f),
             startAngle = -90f,
             sweepAngle = 360f,
             useCenter = false,
@@ -222,8 +277,8 @@ private fun DrawScope.drawCheck(
   val cx = topLeft.x + size.width / 2f
   val cy = topLeft.y + size.height / 2f
   val s = size.width * 0.20f
-  drawLine(color, Offset(cx - s, cy + s * 0.2f), Offset(cx - s * 0.2f, cy + s), 5.dp.toPx(), StrokeCap.Round)
-  drawLine(color, Offset(cx - s * 0.2f, cy + s), Offset(cx + s, cy - s * 0.8f), 5.dp.toPx(), StrokeCap.Round)
+  drawLine(color, Offset(cx - s, cy + s * 0.2f), Offset(cx - s * 0.2f, cy + s), 6.dp.toPx(), StrokeCap.Round)
+  drawLine(color, Offset(cx - s * 0.2f, cy + s), Offset(cx + s, cy - s * 0.8f), 6.dp.toPx(), StrokeCap.Round)
 }
 
 private fun DrawScope.drawCross(
@@ -234,8 +289,8 @@ private fun DrawScope.drawCross(
   val cx = topLeft.x + size.width / 2f
   val cy = topLeft.y + size.height / 2f
   val s = size.width * 0.18f
-  drawLine(color, Offset(cx - s, cy - s), Offset(cx + s, cy + s), 5.dp.toPx(), StrokeCap.Round)
-  drawLine(color, Offset(cx + s, cy - s), Offset(cx - s, cy + s), 5.dp.toPx(), StrokeCap.Round)
+  drawLine(color, Offset(cx - s, cy - s), Offset(cx + s, cy + s), 6.dp.toPx(), StrokeCap.Round)
+  drawLine(color, Offset(cx + s, cy - s), Offset(cx - s, cy + s), 6.dp.toPx(), StrokeCap.Round)
 }
 
 private fun DrawScope.drawDiamond(
@@ -253,12 +308,14 @@ private fun DrawScope.drawDiamond(
     lineTo(cx - s * 0.72f, cy)
     close()
   }
+  // A faint backing glow plus the solid shape gives the mark some weight.
+  drawPath(p, color.copy(alpha = 0.25f), style = Stroke(width = 8.dp.toPx()))
   drawPath(p, color)
 }
 
 /**
- * Draws the action label inside the ring, horizontally centred and sitting in
- * the lower third so it clears the centre glyph above it.
+ * Draws the action label inside the ring, horizontally centred and sitting low
+ * enough to clear the centre glyph above it.
  */
 private fun DrawScope.drawCenteredLabel(
   measurer: TextMeasurer,
@@ -270,7 +327,7 @@ private fun DrawScope.drawCenteredLabel(
 ) {
   val style = TextStyle(
     color = color,
-    fontSize = 15.sp,
+    fontSize = 16.sp,
     fontWeight = FontWeight.SemiBold,
   )
   val result = measurer.measure(
@@ -279,11 +336,9 @@ private fun DrawScope.drawCenteredLabel(
     constraints = Constraints(maxWidth = diameter.toInt()),
   )
   val x = topLeft.x + (size.width - result.size.width) / 2f
-  val y = topLeft.y + size.height * 0.60f
+  val y = topLeft.y + size.height * 0.58f
   drawText(result, topLeft = Offset(x, y))
 }
 
 private val DrawScope.minDimension: Float
   get() = minOf(size.width, size.height)
-
-private fun Size.minDimension(): Float = minOf(width, height)
