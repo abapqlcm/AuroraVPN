@@ -52,15 +52,15 @@ jobs:
         run: chmod +x gradlew
 
       - name: Run unit tests
-        run: ./gradlew :app:testStableDebugUnitTest --stacktrace
+        run: ./gradlew :app:testDebugUnitTest --stacktrace
 
       - name: Build debug APK
-        run: ./gradlew :app:assembleStableDebug --stacktrace
+        run: ./gradlew :app:assembleDebug --stacktrace
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: auroravpn-phase1-apk
-          path: app/build/outputs/apk/stable/debug/*.apk
+          path: app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
           retention-days: 14
