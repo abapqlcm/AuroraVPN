@@ -121,6 +121,7 @@ fun ConnectButton(
     VpnStatus.Disconnecting -> "قطع ارتباط"
     is VpnStatus.Error -> "خطا"
     VpnStatus.PermissionRequired -> "اجازه"
+    is VpnStatus.Reconnecting -> "اتصال مجدد"
   }
 
   // Pressed feedback: a small, immediate scale-down.

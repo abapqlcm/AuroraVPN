@@ -11,6 +11,7 @@ import android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
 import android.os.ParcelFileDescriptor
 import android.util.Log
 import androidx.core.app.NotificationCompat
+import com.auroravpn.app.AuroraApplication
 import com.auroravpn.app.MainActivity
 import com.auroravpn.app.R
 import com.auroravpn.app.core.PreparedEngine

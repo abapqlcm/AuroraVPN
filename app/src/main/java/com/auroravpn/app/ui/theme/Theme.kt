@@ -41,7 +41,7 @@ fun AuroraTheme(
 ) {
   MaterialTheme(
     colorScheme = OrbitColors,
-    typography = OrbitTypography,
+    typography = AuroraTypography,
     content = content,
   )
 }

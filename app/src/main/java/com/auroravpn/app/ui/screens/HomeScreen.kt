@@ -12,6 +12,10 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Settings
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -122,9 +126,9 @@ fun HomeScreen(
         .statusBarsPadding()
         .padding(12.dp),
     ) {
-      androidx.compose.material3.IconButton(onClick = onOpenSettings) {
-        androidx.compose.material3.Icon(
-          imageVector = androidx.compose.material.icons.Icons.Rounded.Settings,
+      IconButton(onClick = onOpenSettings) {
+        Icon(
+          imageVector = Icons.Rounded.Settings,
           contentDescription = "تنظیمات",
           tint = MaterialTheme.colorScheme.onSurfaceVariant,
         )
