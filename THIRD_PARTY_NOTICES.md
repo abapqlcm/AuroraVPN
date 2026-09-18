@@ -1,6 +1,7 @@
 # Third-party notices
 
-WhiteAestherMobile is [AGPL-3.0](LICENSE). It embeds components under AGPL-3.0
+AuroraVPN is [AGPL-3.0](LICENSE), a fork of WhiteAestherMobile (AGPL-3.0)
+at revision 7ce2fcb. It embeds components under AGPL-3.0
 and GPL-3.0; both are listed below with where to get their source.
 
 AGPL-3.0 section 13 expressly permits combining an AGPL-3.0 work with a work

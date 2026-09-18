@@ -2440,7 +2440,7 @@ class AetherVpnService : VpnService() {
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
         )
         val builder = Builder()
-            .setSession("WhiteAesther")
+            .setSession("AuroraVPN")
             .setConfigureIntent(configureIntent)
             .addRoute("0.0.0.0", 0)
 

@@ -26,5 +26,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "WhiteAestherMobile"
+rootProject.name = "AuroraVPN"
 include(":app")

@@ -1,7 +1,7 @@
 <resources>
-    <string name="app_name" translatable="false">WhiteAesther</string>
+    <string name="app_name" translatable="false">AuroraVPN</string>
     <string name="connection_channel_name">Connection status</string>
-    <string name="connection_channel_description">Shows the active WhiteAesther proxy or device VPN.</string>
+    <string name="connection_channel_description">Shows the active AuroraVPN proxy or device VPN.</string>
     <string name="stop">Stop</string>
     <string name="works_on_most_networks_start_here">Works on most networks. Start here.</string>
     <string name="patchy_signal">Patchy signal</string>
@@ -70,7 +70,7 @@
     <string name="how_it_connects">How it connects</string>
     <string name="pick_a_profile_and_you_re_done">Pick a profile and you\'re done. Everything below is optional.</string>
     <string name="profile">Profile</string>
-    <string name="describes_your_network_whiteaesther_picks_the_re">Describes your network. WhiteAesther picks the rest to match.</string>
+    <string name="describes_your_network_whiteaesther_picks_the_re">Describes your network. AuroraVPN picks the rest to match.</string>
     <string name="endpoint">Endpoint</string>
     <string name="exit_chain">Exit chain</string>
     <string name="routing_rules">Routing rules</string>
@@ -183,25 +183,25 @@
     <string name="connect_and_disconnect_from_the_notification_sha">Connect and disconnect from the notification shade.</string>
     <string name="add">Add</string>
     <string name="set_this_in_your_phone_s_settings">Set this in your phone\'s settings</string>
-    <string name="this_phone_keeps_its_own_battery_rules">This phone keeps its own battery rules beside Android\'s, and the prompt did not change them. Open Settings, find Battery for WhiteAesther, and choose the unrestricted option.</string>
+    <string name="this_phone_keeps_its_own_battery_rules">This phone keeps its own battery rules beside Android\'s, and the prompt did not change them. Open Settings, find Battery for AuroraVPN, and choose the unrestricted option.</string>
     <string name="open_app_settings">Open app settings</string>
     <string name="i_ve_done_this">I\'ve done this</string>
     <string name="keep_running_in_the_background">Keep running in the background</string>
-    <string name="android_is_allowed_to_suspend_whiteaesther_while">Android is allowed to suspend WhiteAesther while the screen is off, which drops the connection. Excluding it from battery optimisation stops that.</string>
+    <string name="android_is_allowed_to_suspend_whiteaesther_while">Android is allowed to suspend AuroraVPN while the screen is off, which drops the connection. Excluding it from battery optimisation stops that.</string>
     <string name="allow_background_running">Allow background running</string>
     <string name="identity_access">Identity &amp; access</string>
     <string name="the_device_identity_this_app_was_issued">The device identity this app was issued</string>
     <string name="diagnostics_logs">Diagnostics &amp; logs</string>
     <string name="see_what_happened_and_send_a_report">See what happened, and send a report to the developer</string>
-    <string name="about_whiteaesther">About WhiteAesther</string>
+    <string name="about_whiteaesther">About AuroraVPN</string>
     <string name="version_engine_build_and_licences">Version, engine build, and licences</string>
     <string name="join_us_on_telegram">Join us on Telegram</string>
     <string name="no_app_on_this_device_can_open">No app on this device can open the community link.</string>
     <string name="t_me_whitedns">t.me/whitedns</string>
     <string name="news_releases_and_help">News, releases and help</string>
-    <string name="whiteaesther_com_whitedns_whiteaesther_buildconf">WhiteAesther %1$s</string>
+    <string name="whiteaesther_com_whitedns_whiteaesther_buildconf">AuroraVPN %1$s</string>
     <string name="settings_identity">Settings · Identity</string>
-    <string name="whiteaesther_issues_this_device_its_own_identity">WhiteAesther issues this device its own identity. There is no account to create.</string>
+    <string name="whiteaesther_issues_this_device_its_own_identity">AuroraVPN issues this device its own identity. There is no account to create.</string>
     <string name="generated_on_first_connect">Generated on first connect</string>
     <string name="private_key">Private key</string>
     <string name="app_private_storage">App-private storage</string>
@@ -224,7 +224,7 @@
     <string name="proxy_bind">Proxy bind</string>
     <string name="cleartext_traffic">Cleartext traffic</string>
     <string name="licence_and_source">Licence and source</string>
-    <string name="whiteaesthermobile_and_the_aether_engine_it_embe">WhiteAestherMobile and the Aether engine it embeds are free software under AGPL-3.0. The complete source for this build, and the notices for the third-party code it includes, are published at the address above.</string>
+    <string name="whiteaesthermobile_and_the_aether_engine_it_embe">AuroraVPN and the Aether engine it embeds are free software under AGPL-3.0. The complete source for this build, and the notices for the third-party code it includes, are published at the address above.</string>
     <string name="settings_diagnostics">Settings · Diagnostics</string>
     <string name="diagnostics">Diagnostics</string>
     <string name="if_something_is_broken_send_this_to">If something is broken, send this to the developer — it is how fixes get written.</string>
@@ -257,16 +257,16 @@
     <string name="where_your_traffic_comes_out">Where your traffic comes out</string>
     <string name="adds_a_second_hop_after_the_tunnel">Adds a second hop after the tunnel, so sites see your node\'s address instead of Cloudflare\'s.</string>
     <string name="not_available_in_this_build">Not available in this build</string>
-    <string name="this_copy_of_whiteaesther_does_not_include">This copy of WhiteAesther does not include the exit chain. Everything else works as normal.</string>
+    <string name="this_copy_of_whiteaesther_does_not_include">This copy of AuroraVPN does not include the exit chain. Everything else works as normal.</string>
     <string name="coverage_has_to_be_whole_device">Coverage has to be whole device</string>
     <string name="the_chain_routes_the_whole_phone_under">The chain routes the whole phone. Under Traffic, set Coverage back to Whole device, or turn the chain off.</string>
     <string name="traffic_leaves_from_your_node">Traffic leaves from your node.</string>
     <string name="traffic_leaves_from_cloudflare_as_normal">Traffic leaves from Cloudflare, as normal.</string>
-    <string name="with_this_off_whiteaesther_works_exactly_as">With this off, WhiteAesther works exactly as it does today. Turn it on if you have a subscription or a node of your own, and want sites to see that address rather than Cloudflare\'s.</string>
+    <string name="with_this_off_whiteaesther_works_exactly_as">With this off, AuroraVPN works exactly as it does today. Turn it on if you have a subscription or a node of your own, and want sites to see that address rather than Cloudflare\'s.</string>
     <string name="dial_nodes_through_the_tunnel">Dial nodes through the tunnel</string>
     <string name="your_network_never_learns_the_node_s">Your network never learns the node\'s address, and the node never learns yours.</string>
     <string name="nodes_are_reached_directly_use_this_only">Nodes are reached directly. Use this only where the tunnel itself is blocked.</string>
-    <string name="dialling_directly_skips_the_tunnel_entirely_whit">Dialling directly skips the tunnel entirely -- WhiteAesther becomes a plain client for your node. That is the right choice on a network that blocks the tunnel outright, and the wrong one everywhere else.</string>
+    <string name="dialling_directly_skips_the_tunnel_entirely_whit">Dialling directly skips the tunnel entirely -- AuroraVPN becomes a plain client for your node. That is the right choice on a network that blocks the tunnel outright, and the wrong one everywhere else.</string>
     <string name="where_your_nodes_come_from">Where your nodes come from</string>
     <string name="a_subscription_link_or_nodes_pasted_by">A subscription link, or nodes pasted by hand.</string>
     <string name="remove">Remove</string>
@@ -308,7 +308,7 @@
     <string name="reading_the_apps_on_this_phone">Reading the apps on this phone…</string>
     <string name="no_apps_to_list_this_device_reports">No apps to list. This device reports nothing with a launcher icon.</string>
     <string name="nothing_matches_query">Nothing matches &quot;%1$s&quot;.</string>
-    <string name="whiteaesther_itself_is_never_in_this_list">WhiteAesther itself is never in this list. Routing the app through its own tunnel would send the connection it is building back into itself.</string>
+    <string name="whiteaesther_itself_is_never_in_this_list">AuroraVPN itself is never in this list. Routing the app through its own tunnel would send the connection it is building back into itself.</string>
     <string name="system_app">System app</string>
     <string name="advanced">Advanced</string>
     <string name="tv">TV</string>
@@ -326,13 +326,13 @@
     <string name="stage_connecting">CONNECTING</string>
     <string name="stage_connected">CONNECTED</string>
     <string name="stage_stopping">STOPPING</string>
-    <string name="notify_title_proxy">WhiteAesther proxy</string>
-    <string name="notify_title_tun">WhiteAesther device VPN</string>
+    <string name="notify_title_proxy">AuroraVPN proxy</string>
+    <string name="notify_title_tun">AuroraVPN device VPN</string>
     <string name="notify_whole_device_protected">Whole-device traffic is protected</string>
     <string name="notify_socks_shared">SOCKS5 shared on the local network, port %1$d</string>
     <string name="notify_socks_local">SOCKS5 listening on 127.0.0.1:%1$d</string>
     <string name="status_preparing_connection">Preparing connection</string>
-    <string name="status_restoring">Restoring WhiteAesther</string>
+    <string name="status_restoring">Restoring AuroraVPN</string>
     <string name="status_reconnecting_tun">Reconnecting whole-device VPN</string>
     <string name="status_validating_route">Validating encrypted route</string>
     <string name="status_starting_chain">Starting the exit chain</string>
@@ -363,7 +363,7 @@
     <string name="msg_no_identity_yet">There is no identity to export yet</string>
     <string name="msg_disconnect_before_import">Disconnect before importing an identity</string>
     <string name="msg_identity_imported">Identity imported. Connect to use it.</string>
-    <string name="msg_not_an_identity">That file is not a WhiteAesther identity</string>
+    <string name="msg_not_an_identity">That file is not a AuroraVPN identity</string>
     <string name="msg_identity_saved">Identity saved. Keep it somewhere safe.</string>
     <string name="msg_scanning_routes">Scanning validated %1$s routes…</string>
     <string name="msg_nothing_over_trying">Nothing over %1$s, trying %2$s…</string>
@@ -434,9 +434,9 @@
     <string name="status_connecting_to">Connecting to %1$s</string>
     <string name="status_connecting_for_chain">Connecting to %1$s for the exit chain</string>
     <string name="status_searching_nested">Searching for an endpoint for the nested tunnel. This is the slowest option.</string>
-    <string name="status_stopping_app">Stopping WhiteAesther</string>
+    <string name="status_stopping_app">Stopping AuroraVPN</string>
     <string name="status_stopped">Stopped</string>
-    <string name="notify_title_blocking">WhiteAesther blocking</string>
+    <string name="notify_title_blocking">AuroraVPN blocking</string>
     <string name="notify_strict_blocking">Strict blocking is on. Tap to open and lift.</string>
     <string name="notify_tunnel_failed">The tunnel failed. Tap to open and lift.</string>
     <string name="err_settings_missing">Connection settings are missing</string>
