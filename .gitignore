@@ -13,3 +13,6 @@ composeApp/build/
 *.keystore
 app/release/
 captures/
+# Rust build artifacts. Never tracked.
+native/**/target/
+Cargo.lock is tracked for the bridge; target/ never is.

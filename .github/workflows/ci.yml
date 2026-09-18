@@ -16,11 +16,15 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  ANDROID_NDK_VERSION: "29.0.14206865"
+  ANDROID_CMAKE_VERSION: "3.22.1"
+
 jobs:
   build:
     name: Build and test
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 60
 
     steps:
       - uses: actions/checkout@v4
@@ -46,7 +50,34 @@ jobs:
           sdkmanager \
             "platforms;android-36" \
             "build-tools;36.0.0" \
-            "platform-tools"
+            "platform-tools" \
+            "ndk;${{ env.ANDROID_NDK_VERSION }}" \
+            "cmake;${{ env.ANDROID_CMAKE_VERSION }}"
+
+      # Aether 2.0.0 declares rust-version 1.98, and cargo refuses to build it
+      # with anything older. Pinned, not "latest", so a toolchain bump cannot
+      # silently change what the release is built with.
+      - name: Install Rust 1.98
+        uses: dtolnay/rust-toolchain@1.98.0
+        with:
+          targets: aarch64-linux-android,armv7-linux-androideabi,x86_64-linux-android
+
+      - name: Install cargo-ndk
+        shell: bash
+        run: cargo install cargo-ndk --version 4.1.2 --locked
+
+      # BoringSSL's build needs a CMake newer than the runner's, and Ninja.
+      # The Android SDK's own copies are used rather than a system install so
+      # the build here matches a local one done from Android Studio.
+      - name: Point the build at the SDK's CMake and Ninja
+        shell: bash
+        run: |
+          echo "ANDROID_HOME=$ANDROID_HOME"
+          echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/${{ env.ANDROID_NDK_VERSION }}" >> "$GITHUB_ENV"
+          CMAKE_BIN="$ANDROID_HOME/cmake/${{ env.ANDROID_CMAKE_VERSION }}/bin"
+          echo "$CMAKE_BIN" >> "$GITHUB_PATH"
+          echo "CMAKE=$CMAKE_BIN/cmake" >> "$GITHUB_ENV"
+          ls -l "$CMAKE_BIN"
 
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
@@ -60,7 +91,7 @@ jobs:
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: auroravpn-phase1-apk
+          name: auroravpn-phase2-apk
           path: app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
           retention-days: 14

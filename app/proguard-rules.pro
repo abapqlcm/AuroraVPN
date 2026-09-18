@@ -19,3 +19,14 @@
 
 # VpnService is started by name from an Intent; R8 cannot see that reference.
 -keep class com.auroravpn.app.service.AuroraVpnService { *; }
+
+# The JNI bridge is looked up by name from native code. If R8 renames or
+# removes any of these, the engine has no entry point and the tunnel cannot
+# start — a failure that shows up only on a real device, as a silent crash.
+-keep class com.auroravpn.app.core.NativeAetherBridge { *; }
+-keep class com.auroravpn.app.core.NativeAetherBridge$* { *; }
+-keepclasseswithmembers class com.auroravpn.app.core.* {
+    native <methods>;
+}
+-keep @java.lang.FunctionalInterface class com.auroravpn.app.core.NativeSocketProtector { *; }
+-keep @java.lang.FunctionalInterface class com.auroravpn.app.core.NativeEngineListener { *; }
