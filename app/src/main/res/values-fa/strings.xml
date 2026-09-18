@@ -6,4 +6,11 @@
     <string name="connecting">در حال اتصال…</string>
     <string name="connected">متصل</string>
     <string name="disconnected">قطع</string>
+
+    <!-- Foreground service -->
+    <string name="vpn_channel_name">تونل VPN</string>
+    <string name="vpn_channel_description">تونل را در پس‌زمینه زنده نگه می‌دارد</string>
+    <string name="vpn_notification_connecting">در حال برقراری تونل امن</string>
+    <string name="vpn_notification_connected">VPN فعال است</string>
+    <string name="vpn_notification_disconnected">VPN قطع شد</string>
 </resources>

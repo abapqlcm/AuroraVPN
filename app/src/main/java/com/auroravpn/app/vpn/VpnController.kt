@@ -1,83 +1,117 @@
 package com.auroravpn.app.vpn
 
-import kotlinx.coroutines.delay
+import android.app.Application
+import android.content.Intent
+import android.net.VpnService
+import android.util.Log
+import com.auroravpn.app.core.NativeAetherBridge
+import com.auroravpn.app.service.AuroraVpnService
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.isActive
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.Dispatchers
 
 /**
- * Holds the tunnel state and drives its transitions.
+ * Drives the tunnel and owns its state.
  *
- * THIS IS THE SIMULATED ONE. Phase 4 replaces [connect] and [disconnect] with
- * calls into AuroraVpnService, which in turn calls nativeRun. The screens and
- * the state model stay exactly as they are.
+ * This is the real controller. It asks Android for permission, starts
+ * [AuroraVpnService], which builds the TUN descriptor, and hands the descriptor
+ * to the engine. Every status the UI displays comes from the engine's own
+ * return values or from the platform's callbacks — never from a timer and never
+ * from a constant.
  *
- * The simulation exists so the interaction and the motion can be judged before
- * the engine is live — a connect button that cannot be pressed because the
- * engine is not wired yet teaches us nothing about whether it feels right.
+ * The controller is deliberately thin. It holds the status sink and the
+ * permission question; [AuroraVpnEngine] owns the engine's lifecycle, because
+ * the two have different lifespans (the engine lives with the service, the
+ * controller lives with the process).
  */
-class VpnController {
+class VpnController(private val app: Application) {
 
-  private val _state = MutableStateFlow(VpnState.IDLE)
-  val state: StateFlow<VpnState> = _state.asStateFlow()
+  private val _status = MutableStateFlow<VpnStatus>(VpnStatus.Idle)
+  val status: StateFlow<VpnStatus> = _status.asStateFlow()
 
-  private val _errorMessage = MutableStateFlow<String?>(null)
-  val errorMessage: StateFlow<String?> = _errorMessage.asStateFlow()
+  /**
+   * The sink the engine writes into. The service owns the engine; the
+   * controller owns the sink, so the UI and the engine share one status.
+   */
+  val statusSink: MutableStateFlow<VpnStatus>
+    get() = _status
 
-  private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+  @Volatile private var service: AuroraVpnService? = null
+
+  val isEngineLoaded: Boolean
+    get() = NativeAetherBridge.isLoaded
+
+  val engineVersion: String?
+    get() = NativeAetherBridge.versionOrNull()
+
+  /** The engine's own log lines, drained on demand for diagnostics. */
+  val engineLogs: List<String>
+    get() = NativeAetherBridge.drainLog()
+
+  /** True when [VpnService.prepare] would show the system permission dialog. */
+  fun permissionRequired(): Boolean {
+    return VpnService.prepare(app) != null
+  }
 
   fun toggle() {
-    when (_state.value) {
-      VpnState.IDLE, VpnState.ERROR -> connect()
-      VpnState.CONNECTED -> disconnect()
-      // Busy states are terminal from the user's point of view: the button is
-      // disabled, so a stray tap cannot start a second handshake.
+    when (_status.value) {
+      VpnStatus.Idle, is VpnStatus.Error, VpnStatus.PermissionRequired -> connect()
+      is VpnStatus.Connected -> disconnect()
       else -> {}
     }
   }
 
+  /**
+   * Starts the service, which builds the TUN and runs the engine. If the
+   * permission is missing the state becomes [VpnStatus.PermissionRequired] and
+   * the caller (the activity) must resolve it before calling [onPermissionResult].
+   */
   fun connect() {
-    if (_state.value.isBusy) return
-    _errorMessage.value = null
-    _state.value = VpnState.REQUESTING
-    scope.launch {
-      // Android asks the user to approve the VPN session the first time.
-      delay(420)
-      if (!isActive) return@launch
-      _state.value = VpnState.CONNECTING
-      // Engine handshake. In the real build this is where nativeRun blocks.
-      delay(1_900)
-      if (!isActive) return@launch
-      _state.value = VpnState.CONNECTED
+    if (_status.value.isBusy) return
+
+    if (permissionRequired()) {
+      _status.value = VpnStatus.PermissionRequired
+      return
     }
+    startService()
+  }
+
+  /** Result of the system permission dialog; called by MainActivity. */
+  fun onPermissionResult(granted: Boolean) {
+    if (granted) startService() else _status.value = VpnStatus.PermissionRequired
+  }
+
+  private fun startService() {
+    Log.i(TAG, "CONNECT_REQUESTED")
+    val intent = Intent(app, AuroraVpnService::class.java)
+      .setAction(AuroraVpnService.ACTION_CONNECT)
+    app.startService(intent)
   }
 
   fun disconnect() {
-    if (_state.value.isBusy) return
-    _state.value = VpnState.DISCONNECTING
-    scope.launch {
-      delay(700)
-      if (!isActive) return@launch
-      _state.value = VpnState.IDLE
+    if (_status.value.isBusy) return
+    Log.i(TAG, "DISCONNECT_REQUESTED")
+    service?.disconnect() ?: run {
+      // The service is not bound (process was restarted). Ask it to start and
+      // stop itself.
+      app.startService(
+        Intent(app, AuroraVpnService::class.java)
+          .setAction(AuroraVpnService.ACTION_DISCONNECT)
+      )
     }
   }
 
-  /** Report a failure from the engine layer. Reserved for phase 4. */
-  fun fail(reason: String) {
-    _errorMessage.value = reason
-    _state.value = VpnState.ERROR
+  /** Called by the service once it has been created and bound. */
+  fun attachService(service: AuroraVpnService) {
+    this.service = service
   }
 
-  /** Clear an error and return to idle. */
-  fun acknowledgeError() {
-    if (_state.value == VpnState.ERROR) {
-      _errorMessage.value = null
-      _state.value = VpnState.IDLE
-    }
+  /** Called by the service when the platform revokes the session. */
+  fun onRevoke() {
+    _status.value = VpnStatus.Idle
+  }
+
+  companion object {
+    private const val TAG = "VpnController"
   }
 }

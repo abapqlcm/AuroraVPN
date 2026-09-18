@@ -38,14 +38,23 @@
           The VPN service. Started by name from the UI, so it must survive R8
           minification. FOREGROUND_SERVICE_SPECIAL_USE because a VPN tunnel is
           the app's core function, not a generic long-running task.
+
+          A foreground service type is required from API 34 up. A VPN is not a
+          media or location service; the special-use type is the honest one, and
+          VpnService itself holds the tunnel — the type only governs whether the
+          platform tolerates the foreground post.
         -->
         <service
             android:name=".service.AuroraVpnService"
             android:exported="false"
+            android:foregroundServiceType="specialUse"
             android:permission="android.permission.BIND_VPN_SERVICE">
             <intent-filter>
                 <action android:name="android.net.VpnService" />
             </intent-filter>
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="vpn_tunnel" />
         </service>
 
         <!-- Quick settings tile: connect from the shade without opening the app. -->

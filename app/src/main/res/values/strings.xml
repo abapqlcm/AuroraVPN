@@ -3,4 +3,11 @@
     <string name="connecting">Connecting…</string>
     <string name="connected">Connected</string>
     <string name="disconnected">Disconnected</string>
+
+    <!-- Foreground service -->
+    <string name="vpn_channel_name">VPN tunnel</string>
+    <string name="vpn_channel_description">Keeps the tunnel alive while the app is in the background</string>
+    <string name="vpn_notification_connecting">Establishing secure tunnel</string>
+    <string name="vpn_notification_connected">VPN active</string>
+    <string name="vpn_notification_disconnected">VPN disconnected</string>
 </resources>

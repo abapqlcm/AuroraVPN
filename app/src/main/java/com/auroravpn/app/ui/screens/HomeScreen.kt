@@ -24,35 +24,29 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.auroravpn.app.ui.background.AuroraSky
 import com.auroravpn.app.ui.components.ConnectButton
 import com.auroravpn.app.vpn.VpnController
-import com.auroravpn.app.vpn.VpnState
+import com.auroravpn.app.vpn.VpnStatus
 import com.auroravpn.app.vpn.isBusy
 import com.auroravpn.app.vpn.isProtecting
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Settings
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 
 /**
- * The main screen. Everything on it is derived from the VPN state, so there is
+ * The main screen. Everything on it is derived from the VPN status, so there is
  * one source of truth and no screen-local state to get out of sync.
  */
 @Composable
 fun HomeScreen(
   controller: VpnController,
   onOpenSettings: () -> Unit,
+  onRequestVpnPermission: () -> Unit,
   contentPadding: PaddingValues,
   modifier: Modifier = Modifier,
 ) {
-  val state by controller.state.collectAsStateWithLifecycle()
-  val error by controller.errorMessage.collectAsStateWithLifecycle()
+  val status by controller.status.collectAsStateWithLifecycle()
 
-  // The sky rests while the tunnel is down and comes alive once it is up.
-  // These values were measured: anything below ~0.5 reads as a flat black
-  // background on a phone screen, which is what made the first pass look dead.
+  // The sky comes alive once the tunnel is up and rests while it is down.
   val skyIntensity = when {
-    state.isProtecting -> 1f
-    state.isBusy -> 0.75f
-    state == VpnState.ERROR -> 0.5f
+    status.isProtecting -> 1f
+    status.isBusy -> 0.75f
+    status is VpnStatus.Error -> 0.5f
     else -> 0.65f
   }
 
@@ -78,14 +72,23 @@ fun HomeScreen(
       )
 
       ConnectButton(
-        state = state,
-        onClick = controller::toggle,
+        status = status,
+        enabled = !status.isBusy,
+        onClick = {
+          // The permission state is not an error the user can retry past; it
+          // needs the system dialog, so it goes to the activity.
+          if (status is VpnStatus.PermissionRequired) {
+            onRequestVpnPermission()
+          } else {
+            controller.toggle()
+          }
+        },
       )
 
       // The status line. AnimatedContent so the wording does not snap; a hard
       // swap between "connecting" and "connected" looks like a glitch.
       AnimatedContent(
-        targetState = state,
+        targetState = status,
         transitionSpec = {
           (fadeIn(tween(250)) togetherWith fadeOut(tween(250)))
         },
@@ -99,9 +102,11 @@ fun HomeScreen(
         )
       }
 
-      if (error != null) {
+      // The error reason, when the engine gave one. Raw engine messages only —
+      // a fabricated explanation would be worse than the truth.
+      (status as? VpnStatus.Error)?.reason?.let { reason ->
         Text(
-          text = error.orEmpty(),
+          text = reason,
           style = MaterialTheme.typography.bodySmall,
           color = MaterialTheme.colorScheme.error,
           textAlign = TextAlign.Center,
@@ -117,9 +122,9 @@ fun HomeScreen(
         .statusBarsPadding()
         .padding(12.dp),
     ) {
-      IconButton(onClick = onOpenSettings) {
-        Icon(
-          imageVector = Icons.Rounded.Settings,
+      androidx.compose.material3.IconButton(onClick = onOpenSettings) {
+        androidx.compose.material3.Icon(
+          imageVector = androidx.compose.material.icons.Icons.Rounded.Settings,
           contentDescription = "تنظیمات",
           tint = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -128,23 +133,21 @@ fun HomeScreen(
   }
 }
 
-private fun statusText(state: VpnState): String = when (state) {
-  VpnState.IDLE -> "آمادهٔ اتصال"
-  VpnState.REQUESTING -> "در حال دریافت اجازه"
-  VpnState.CONNECTING -> "در حال دست‌دهی با سرور"
-  VpnState.CONNECTED -> "اتصال امن برقرار است"
-  VpnState.DISCONNECTING -> "در حال قطع ارتباط"
-  VpnState.ERROR -> "اتصال ناموفق بود"
+private fun statusText(status: VpnStatus): String = when (status) {
+  VpnStatus.Idle -> "آمادهٔ اتصال"
+  VpnStatus.Preparing -> "در حال آماده‌سازی مسیر"
+  is VpnStatus.Connecting -> "در حال دست‌دهی با سرور"
+  is VpnStatus.Connected -> "اتصال امن برقرار است"
+  VpnStatus.Disconnecting -> "در حال قطع ارتباط"
+  is VpnStatus.Reconnecting -> "در حال اتصال مجدد"
+  is VpnStatus.Error -> "اتصال ناموفق بود"
+  VpnStatus.PermissionRequired -> "نیاز به اجازهٔ VPN"
 }
 
-/**
- * The status line's colour. Read from the current theme by the caller so this
- * stays a plain function — MaterialTheme.colorScheme is a composition-local and
- * cannot be read outside a @Composable.
- */
 @Composable
-private fun statusColor(state: VpnState) = when {
-  state.isProtecting -> MaterialTheme.colorScheme.tertiary
-  state == VpnState.ERROR -> MaterialTheme.colorScheme.error
+private fun statusColor(status: VpnStatus) = when {
+  status.isProtecting -> MaterialTheme.colorScheme.tertiary
+  status is VpnStatus.Error -> MaterialTheme.colorScheme.error
+  status is VpnStatus.PermissionRequired -> MaterialTheme.colorScheme.error
   else -> MaterialTheme.colorScheme.onSurfaceVariant
 }

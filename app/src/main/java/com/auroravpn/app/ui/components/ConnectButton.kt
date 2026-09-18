@@ -38,7 +38,7 @@ import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.auroravpn.app.vpn.VpnState
+import com.auroravpn.app.vpn.VpnStatus
 import com.auroravpn.app.vpn.isBusy
 import com.auroravpn.app.vpn.isProtecting
 import kotlin.math.PI
@@ -64,7 +64,8 @@ private const val TAU = (PI * 2).toFloat()
  */
 @Composable
 fun ConnectButton(
-  state: VpnState,
+  status: VpnStatus,
+  enabled: Boolean = true,
   onClick: () -> Unit,
   modifier: Modifier = Modifier,
 ) {
@@ -112,13 +113,14 @@ fun ConnectButton(
   val onSurface = MaterialTheme.colorScheme.onSurface
   val errorColor = MaterialTheme.colorScheme.error
 
-  val label = when (state) {
-    VpnState.IDLE -> "اتصال"
-    VpnState.REQUESTING -> "درخواست"
-    VpnState.CONNECTING -> "در حال اتصال"
-    VpnState.CONNECTED -> "متصل"
-    VpnState.DISCONNECTING -> "قطع ارتباط"
-    VpnState.ERROR -> "خطا"
+  val label = when (status) {
+    VpnStatus.Idle -> "اتصال"
+    VpnStatus.Preparing -> "آماده‌سازی"
+    is VpnStatus.Connecting -> "در حال اتصال"
+    is VpnStatus.Connected -> "متصل"
+    VpnStatus.Disconnecting -> "قطع ارتباط"
+    is VpnStatus.Error -> "خطا"
+    VpnStatus.PermissionRequired -> "اجازه"
   }
 
   // Pressed feedback: a small, immediate scale-down.
@@ -128,11 +130,15 @@ fun ConnectButton(
     modifier = modifier
       .size(236.dp)
       .semantics { role = Role.Button }
-      .progressSemantics(if (state.isProtecting) 1f else 0f)
+      .progressSemantics(
+        if (status.isProtecting) 1f
+        else if (status.isBusy) 0f
+        else 0f,
+      )
       .clickable(
         interactionSource = interaction,
         indication = null,
-        enabled = !state.isBusy,
+        enabled = !status.isBusy,
         onClick = onClick,
       ),
     contentAlignment = Alignment.Center,
@@ -158,7 +164,7 @@ fun ConnectButton(
       )
 
       when {
-        state.isProtecting -> {
+        status.isProtecting -> {
           // Three glow layers, widest and faintest first: this is what makes a
           // drawn ring read as emitted light instead of a painted circle.
           val breathe = 0.5f + 0.5f * sin(pulse * TAU)
@@ -192,7 +198,7 @@ fun ConnectButton(
           drawCheck(topLeft, arcSize, gold)
         }
 
-        state.isBusy -> {
+        status.isBusy -> {
           // A rotating open arc. The gap is what carries "indeterminate": a
           // full rotating ring would read as progress pretending to move.
           val start = -90f + spin * 360f
@@ -218,7 +224,7 @@ fun ConnectButton(
           )
         }
 
-        state == VpnState.ERROR -> {
+        status is VpnStatus.Error -> {
           drawArc(
             color = errorColor.copy(alpha = 0.30f),
             startAngle = -90f,

@@ -30,10 +30,14 @@ object NativeAetherBridge {
             .getOrDefault(emptyList())
     }
 
-    fun validate(configJson: String): NativeResult = call {
-        validateConfig(configJson)
-    }.toResult()
-
+    /**
+     * Resolves the route: provisions an identity if none exists, scans for a
+     * reachable endpoint, validates it. Blocks on the engine's tokio runtime,
+     * so the caller must be off the main thread.
+     *
+     * Returns the engine's own report of the tunnel's addresses and the peer it
+     * chose, or the engine's error message when it could not resolve one.
+     */
     fun prepare(configJson: String): Result<PreparedEngine> = call {
         nativePrepare(configJson)
     }.fold(
@@ -48,6 +52,35 @@ object NativeAetherBridge {
                     ipv6 = json.getString("ipv6"),
                     peer = json.getString("peer"),
                 )
+            }
+        },
+        onFailure = { Result.failure(it) },
+    )
+
+    /**
+     * Runs the tunnel for the lifetime of the session. Blocks until the session
+     * ends — either because [stop] was called or the tunnel failed — so the
+     * caller must never be on the main thread.
+     *
+     * [listener] receives [NativeEngineListener.onNativeReady] once the tunnel
+     * is established; that callback is the only signal that the connection is
+     * actually live.
+     */
+    fun run(
+        configJson: String,
+        preparedPeer: String,
+        tunFd: Int,
+        listener: NativeEngineListener?,
+    ): Result<String> = call {
+        nativeRun(configJson, preparedPeer, tunFd, listener)
+    }.fold(
+        onSuccess = { raw ->
+            runCatching {
+                val json = org.json.JSONObject(raw)
+                check(json.optBoolean("ok")) {
+                    json.optString("error", "Engine run failed")
+                }
+                raw
             }
         },
         onFailure = { Result.failure(it) },

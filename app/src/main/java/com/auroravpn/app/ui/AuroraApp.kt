@@ -10,6 +10,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -24,17 +25,19 @@ private object Routes {
 
 /**
  * The app's navigation graph. Two destinations, no deep links, no arguments —
- * deliberately small. The VPN controller is created here and shared by
- * reference so the whole app sees one tunnel.
+ * deliberately small. The VPN controller is created once in MainActivity and
+ * passed by reference so the whole app sees one tunnel and one status.
  */
 @Composable
-fun AuroraApp() {
+fun AuroraApp(
+  controller: VpnController,
+  onRequestVpnPermission: () -> Unit,
+) {
   val navController = rememberNavController()
-  val controller = remember { VpnController() }
 
   Scaffold(
     modifier = Modifier.fillMaxSize(),
-    containerColor = androidx.compose.ui.graphics.Color.Transparent,
+    containerColor = Color.Transparent,
   ) { padding ->
     NavHost(
       navController = navController,
@@ -57,6 +60,7 @@ fun AuroraApp() {
         HomeScreen(
           controller = controller,
           onOpenSettings = { navController.navigate(Routes.SETTINGS) },
+          onRequestVpnPermission = onRequestVpnPermission,
           contentPadding = padding,
         )
       }
