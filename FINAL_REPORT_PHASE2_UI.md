@@ -58,21 +58,36 @@ moving it is what let the old screens be deleted without losing the presets. Its
 | Check | Result |
 |---|---|
 | `compilePreviewDebugKotlin` | PASS |
+| `compilePreviewDebugAndroidTestKotlin` | PASS |
 | Unit tests | 225 tests, 0 failures, 0 errors, 0 skipped |
 | Lint | 0 errors (warnings only, all pre-existing from WAM) |
-| APK build | PASS — 3 ABIs, Aurora classes + fa/en string resources in the dex, removed UI classes absent |
-| Rust/native/JNI | Run by CI (needs the Rust + NDK toolchain; built on GitHub Actions only) |
-| GitHub Actions | CI run `35373157576` on `e86ee88` — see status below |
+| GitHub Actions (full: Rust + Go + 3 ABIs + APK) | **PASS** — run `35375306116` on `c074003` |
 | Device VPN/TUN | NOT RUN — no device available |
 
-The local APK was built with the Rust/NDK task skipped, so its native engine is from a
-prior build. The CI run builds the real thing.
+CI artifact `auroravpn-preview` (388 MB, 3 ABIs) verified:
+
+- `libwhiteaesther_core.so`, `libwhiteaestherchain.so`, `libtor.so`,
+  `liblyrebird.so`, `libsnowflake.so` all present on arm64
+- 23 JNI symbols exported intact — `NativeAetherBridge` (14) and `NativeChainBridge`
+  (9), prefix `Java_com_whitedns_whiteaesther_core_*` unchanged
+- Aurora classes in the dex; the 8 removed WAM UI classes absent
+- 35 Persian strings shipped
+- Signed (v2 debug), label `AuroraVPN`
 
 ## WAM UI
 
 **Replaced screens (8 files, 5,022 lines removed):** `WhiteAestherApp`, `Screens`,
 `ChainScreen`, `SplitTunnelScreen`, `ConnectOrb`, `AetherComponents`, `Summaries`,
 `TvSupport`.
+
+**Also removed:** 6 Compose instrumentation tests in `androidTest` that exercised those
+screens — `WhiteAestherAppTest`, `ChainScreenTest`, `SplitTunnelScreenTest`,
+`IdentityBackupTest`, `LanSharingTest`, `BatteryNoticeTest`. They compiled against the
+deleted UI and had nothing left to test. The backend instrumentation tests
+(`service/`, `core/` — ChainSession, PsiphonSession, TorSession, WireGuardSession,
+AutoTransport, SplitTunnelSession, WholeDevice, SharedIdentity, IdentityPortability)
+are untouched and still compile. Their device coverage is lost to this phase; new
+Aurora-screen tests belong with the Network Orbit phase.
 
 **Remaining:** `theme/Theme.kt`, `theme/Type.kt`, `TvUiPolicy.kt`. These are the theme
 and the TV layout policy — the Aurora surface uses them deliberately, they are not
@@ -89,8 +104,9 @@ visual language arrives with Network Orbit.
 | Commit | Purpose |
 |---|---|
 | `e86ee88` | Phase 2: Aurora raw functional UI on the WAM backend |
+| `c074003` | Remove the 6 dead WAM UI instrumentation tests |
 
-Pushed to `main`. Prior commits `a907728` (WAM base), `d4c538f` (rebrand),
+Both pushed to `main`. Prior commits `a907728` (WAM base), `d4c538f` (rebrand),
 `0574cb9` (CI), `6c778ce` (fork report) are unchanged.
 
 ## What is not verified
