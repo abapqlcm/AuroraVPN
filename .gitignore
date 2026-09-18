@@ -6,8 +6,10 @@ local.properties
 .DS_Store
 build/
 app/build/
+composeApp/build/
 .externalNativeBuild/
 .cxx/
 *.jks
 *.keystore
 app/release/
+captures/

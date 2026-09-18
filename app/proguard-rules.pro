@@ -1,35 +1,21 @@
-# Keep native methods and their classes
--keepclasseswithmembernames,includedescriptorclasses class * {
-    native <methods>;
+# Keep the entry points Compose and serialization need under R8 minification.
+
+# Compose needs its runtime and the lambdas composables capture.
+-keep class androidx.compose.** { *; }
+-dontwarn androidx.compose.**
+
+# kotlinx.serialization generated serializers.
+-keepattributes *Annotation*, InnerClasses
+-dontnote kotlinx.serialization.AnnotationsKt
+
+# Keep the app's own serializable models and their serializers.
+-keep,includedescriptorclasses class com.auroravpn.app.**$$serializer { *; }
+-keepclassmembers class com.auroravpn.app.** {
+    *** Companion;
+}
+-keepclasseswithmembers class com.auroravpn.app.** {
+    kotlinx.serialization.KSerializer serializer(...);
 }
 
-# Keep project models and data classes
--keep class io.github.abapqlcm.auroravpn.model.** { *; }
--keep class io.github.abapqlcm.auroravpn.data.** { *; }
-
-# Absolutely keep the JNI bridge class and all its members
--keep class io.github.abapqlcm.auroravpn.core.HevTun2SocksNative {
-    <methods>;
-    <fields>;
-}
-
-# General networking and serialization stability
--keepattributes Signature, InnerClasses, EnclosingMethod, *Annotation*
--dontwarn okio.**
--dontwarn javax.annotation.**
--dontwarn org.conscrypt.**
--dontwarn okhttp3.**
--dontwarn org.bouncycastle.**
--dontwarn org.openjsse.**
-
--keep class io.github.abapqlcm.auroravpn.** { *; }
-
--keep public class * extends android.app.Application {
-    <init>();
-    void onCreate();
-}
-
--keep public class * extends android.app.Activity {
-    <init>();
-    void onCreate(android.os.Bundle);
-}
+# VpnService is started by name from an Intent; R8 cannot see that reference.
+-keep class com.auroravpn.app.service.AuroraVpnService { *; }

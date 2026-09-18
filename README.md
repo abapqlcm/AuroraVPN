@@ -1,132 +1,87 @@
-<p align="center">
-  <img src="https://img.shields.io/badge/AuroraVPN-Tunnel-007AFF?style=for-the-badge&logo=shield&logoColor=white" alt="AuroraVPN Logo" width="200">
-</p>
+<div align="center">
 
-<h1 align="center">AuroraVPN Tunnel</h1>
+# AuroraVPN
 
-<p align="center">
-  <strong>Advanced, High-Performance Censorship Circumvention Client for Android & Windows</strong>
-</p>
+**A censorship-circumvention client for Android, powered by the [Aether](https://github.com/CluvexStudio/Aether) engine.**
 
-<p align="center">
-  <a href="https://github.com/abapqlcm/AuroraVPN/releases">
-    <img src="https://img.shields.io/github/v/release/abapqlcm/AuroraVPN?style=for-the-badge&color=007AFF" alt="Release">
-  </a>
-  <a href="LICENSE">
-    <img src="https://img.shields.io/badge/License-Proprietary-orange?style=for-the-badge" alt="License">
-  </a>
-  <a href="https://github.com/abapqlcm/AuroraVPN/stargazers">
-    <img src="https://img.shields.io/github/stars/abapqlcm/AuroraVPN?style=for-the-badge&color=FFD700" alt="Stars">
-  </a>
-  <img src="https://img.shields.io/badge/Platform-Android-3DDC84?style=for-the-badge&logo=android&logoColor=white" alt="Platform Android">
-  <img src="https://img.shields.io/badge/Platform-Windows-0078D4?style=for-the-badge&logo=windows&logoColor=white" alt="Platform Windows">
-</p>
+Built from scratch around the Aether core compiled as a JNI library — the engine
+lives inside the app rather than being spawned as a subprocess, which is what
+keeps it running on modern Android.
+
+[![CI](https://img.shields.io/github/actions/workflow/status/abapqlcm/AuroraVPN/ci.yml?branch=main&style=flat-square&label=CI)](https://github.com/abapqlcm/AuroraVPN/actions/workflows/ci.yml)
+[![License](https://img.shields.io/github/license/abapqlcm/AuroraVPN?style=flat-square&color=34d1a6)](LICENSE)
+[![Android](https://img.shields.io/badge/Android-8.0%2B-3ddc84?style=flat-square&logo=android&logoColor=white)](#requirements)
+[![Phase](https://img.shields.io/badge/phase-1%20skeleton-FFD700?style=flat-square)](#roadmap)
+
+</div>
 
 ---
 
-## 📖 Overview
+> **وضعیت:** این پروژه در مرحلهٔ اول توسعه است. هنوز موتور اتصال به آن وصل
+> نشده — فعلاً فقط اسکلت برنامه، تنظیمات بیلد و CI کار می‌کنند. نسخهٔ قابل
+> استفاده در [راهنمای پروژه](#roadmap) مشخص است.
 
-**AuroraVPN Tunnel** is a production-grade VPN and Proxy client for Android and Windows, meticulously engineered to provide secure and stable connectivity in highly restricted network environments. By combining the power of the **Aether Core** with proven tunnel engines, AuroraVPN offers a robust solution against Deep Packet Inspection (DPI) and protocol-based blocking across multiple platforms.
+## Why this exists
 
-## 📱 Versions & Platforms
+Aether already works in Iran — it finds a reachable Cloudflare endpoint, completes
+an authenticated MASQUE handshake, and only trusts a route once real traffic
+returns through it. What is missing is a good Android client around it. This
+project is that client, with an interface designed from scratch rather than
+inherited from a template.
 
-- **Android Client:** `v1.6.9` (Latest Stable)
-- **Windows Client:** `v1.1.1` (First Public Release)
+The previous attempt at this app ran the engine as a subprocess. That approach is
+dead on modern Android: the platform refuses to execute binaries from app-private
+storage, so the tunnel could never start. This rebuild embeds the Aether core as
+a JNI library inside the APK instead, which is how
+[WhiteAestherMobile](https://github.com/WhiteDNS/WhiteAestherMobile) does it.
 
-## ✨ Features
+## Architecture
 
-- 🛡️ **Stealth Connectivity:** Specifically optimized to bypass protocol fingerprinting and DPI.
-- 🚀 **Advanced Transports:** Comprehensive support for **MASQUE**, **WireGuard**, **Gool (WG-in-WG)**, and **Cloudflare Zero Trust**.
-- 🔗 **Psiphon Chain:** Optional second layer routing traffic via Psiphon for a non-Iran exit IP, chainable over MASQUE, WireGuard, or Gool with Auto, Fallback, and Always modes.
-- 📡 **Intelligent Scanning:** Real-time gateway discovery with data-plane validation before connection.
-- ⚡ **Native Performance:** Powered by a high-throughput core for low latency and high bandwidth.
-- 🖥️ **Multi-Platform UI:** Clean, iOS-inspired dashboard built with **Compose Multiplatform** for a seamless experience on both mobile and desktop.
-- 🛠️ **Developer-Ready:** Built-in diagnostics, real-time logging, and flexible protocol presets.
+```
+┌─ UI (Jetpack Compose) ────────────────────────┐
+│  Status, routing, diagnostics, split tunnel   │
+├─ AuroraVpnService (Kotlin) ───────────────────┤
+│  VpnService.Builder → tun fd                  │
+├─ android-bridge (Rust JNI) ───────────────────┤
+│  fd + config → engine, callbacks back up      │
+├─ Aether core (Rust) ──────────────────────────┤
+│  MASQUE / WireGuard / Gool, endpoint scan     │
+└───────────────────────────────────────────────┘
+```
 
-## 🛠️ Supported Protocols
+The engine and the JNI bridge are vendored and left alone. Everything we write
+sits above them.
 
-AuroraVPN Tunnel leverages cutting-edge protocols to ensure connectivity even in the most hostile network environments:
+## Build
 
-### 🎭 MASQUE (HTTP/3 & HTTP/2)
-The flagship protocol for stealth. By tunneling traffic over QUIC (H3) or TLS (H2), it makes VPN traffic look like standard web browsing, making it highly resilient to Deep Packet Inspection (DPI).
+```bash
+git clone https://github.com/abapqlcm/AuroraVPN.git
+cd AuroraVPN
+./gradlew :app:assembleStableDebug
+```
 
-### 🛡️ WireGuard
-A modern, high-performance VPN protocol that uses state-of-the-art cryptography. It is optimized for maximum speed and minimal battery drain on mobile devices.
+Needs JDK 17 and Android SDK 36. CI performs the same build on every push.
 
-### 🌀 Gool (Warp-in-Warp / WG-in-WG)
-A specialized nested WireGuard configuration. By wrapping one WireGuard tunnel inside another, it provides an additional layer of encryption and obfuscation, effectively bypassing many restrictive firewalls and improving stability.
+## Roadmap
 
-### ☁️ Cloudflare Zero Trust (Teams)
-Enterprise-grade security for individuals and organizations. It allows you to route your traffic through Cloudflare's global network using Gateway filtering and Service Tokens, ensuring zero-trust access control.
+| Phase | Contents | Status |
+| --- | --- | --- |
+| **1 — Skeleton** | Clean repo, Gradle toolchain, CI, installable APK | ✅ Done |
+| **2 — Engine** | Aether core + JNI bridge built into the APK | ⏳ Next |
+| **3 — Tunnel** | `VpnService`, foreground service, real connection | ⏳ |
+| **4 — Interface** | Custom UI, animations, routing, split tunnel | ⏳ |
 
-### 🔗 Psiphon Chain
-An optional second layer built on the open-source Psiphon tunnel core. It routes traffic via Psiphon to obtain a non-Iran exit IP and can chain over MASQUE, WireGuard, or Gool. Chain modes include Auto, Fallback, and Always, with a selectable egress region and local endpoints on `127.0.0.1:3080` (SOCKS) and `127.0.0.1:1820` (HTTP).
+## Requirements
 
----
+Android 8.0 (API 26) or newer. `arm64-v8a` is the primary target.
 
-## 🏗️ Technical Architecture
+## License
 
-### [Aether Core (v1.9.0)](https://github.com/CluvexStudio/Aether)
-The orchestration layer responsible for:
-- Encrypted tunnel management.
-- Dynamic gateway health checks.
-- Multi-protocol handling (MASQUE, WG).
+[AGPL-3.0](LICENSE). This project embeds the Aether engine, which is AGPL-3.0, so
+the same license applies to the whole app. See `THIRD_PARTY_NOTICES.md` for the
+components and the revisions they are pinned to.
 
-### [HEV SOCKS5 Tunnel v2.17.1](https://github.com/heiher/hev-socks5-tunnel/releases/tag/2.17.1)
-The native bridge between the system and Aether (Android Native):
-- Mature user-space TCP/IP stack.
-- Zero-copy packet processing.
-- Efficient UDP over SOCKS5 translation.
+## Credits
 
-### [Psiphon Tunnel Core v2.0.41](https://github.com/Psiphon-Labs/psiphon-tunnel-core/releases/tag/v2.0.41)
-The optional second-layer circumvention engine:
-- Open-source Psiphon client core for restricted networks.
-- Provides foreign exit IPs with selectable egress region.
-- Chains over the Aether transports (MASQUE, WG, Gool).
-
-### Compose Multiplatform UI
-A unified UI layer sharing logic between Android and Desktop:
-- Reactive state management using Kotlin Flows.
-- Shared domain logic for IP lookup and configuration management.
-- Native system integrations for each platform.
-
-## 🚀 Getting Started
-
-### Installation
-1. Go to the [Releases](https://github.com/abapqlcm/AuroraVPN/releases) page.
-2. **Android:** Download the APK compatible with your device architecture (`arm64-v8a` is recommended).
-3. **Windows:** Download the `.msi` or `.exe` installer.
-4. Install and grant the necessary permissions (VPN on Android).
-
-### Build from Source
-- **IDE:** Android Studio Ladybug (2024.2.1) or newer.
-- **JDK:** 17
-- **NDK:** 30.0.15729638 (for Android native components).
-- **Gradle Tasks:**
-  - Android: `./gradlew :app:assembleRelease`
-  - Desktop: `./gradlew :composeApp:run`
-
-## ⚙️ CI/CD & Security
-
-The project uses **GitHub Actions** for automated Multi-APK and Desktop releases.
-
-## 💬 Community
-
-Stay updated and get support through our official channels:
-
-- 📢 **Telegram:** [PowerSigma](https://t.me/PowerSigma)
-- 👨‍💻 **Developer:** [@abapqlcm](https://github.com/abapqlcm)
-
-## 🙏 Credits
-
-This project uses the following open-source resources:
-
-- [flag-icons](https://github.com/lipis/flag-icons) — Country flag icons for multi-language and region UI elements.
-- [Vazirmatn](https://github.com/rastikerdar/vazirmatn) — Open-source Persian (Farsi) typeface used for RTL language support.
-- [Inter](https://github.com/rsms/inter) — Open-source English typeface used for the interface typeface.
-- [psiphon-tunnel-core v2.0.41](https://github.com/Psiphon-Labs/psiphon-tunnel-core/releases/tag/v2.0.41) — Open-source Psiphon client core powering the optional Psiphon Chain layer.
-
----
-<p align="center">
-  Built with 💙 by <b>PowerSigma Team</b>
-</p>
+- **[Aether](https://github.com/CluvexStudio/Aether)** by CluvexStudio — the engine this client is built on.
+- **[WhiteAestherMobile](https://github.com/WhiteDNS/WhiteAestherMobile)** by WhiteDNS — the reference for embedding Aether on Android.

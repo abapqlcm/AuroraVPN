@@ -12,8 +12,6 @@ pluginManagement {
   }
 }
 
-plugins { id("org.gradle.toolchains.foojay-resolver-convention") version "1.0.0" }
-
 dependencyResolutionManagement {
   repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
   repositories {
@@ -22,9 +20,6 @@ dependencyResolutionManagement {
   }
 }
 
-rootProject.name = "AuroraVPN-Tunnel"
+rootProject.name = "AuroraVPN"
 
-if (providers.gradleProperty("skipAndroid").getOrElse("false") != "true" && System.getProperty("skipAndroid") != "true") {
-    include(":app")
-}
-include(":composeApp")
+include(":app")

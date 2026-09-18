@@ -1,0 +1,9 @@
+<resources>
+    <!-- Persian interface strings. UI copy stays English by the owner's request;
+         these exist so Persian speakers see system-level surfaces (the tile, the
+         notification) in their own language. -->
+    <string name="app_name">AuroraVPN</string>
+    <string name="connecting">در حال اتصال…</string>
+    <string name="connected">متصل</string>
+    <string name="disconnected">قطع</string>
+</resources>
