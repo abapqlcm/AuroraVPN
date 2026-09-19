@@ -38,6 +38,7 @@ import com.whitedns.whiteaesther.service.EngineStatusStore
 import com.whitedns.whiteaesther.ui.TvUiPolicy
 import com.whitedns.whiteaesther.ui.theme.WhiteAestherTheme
 import com.auroravpn.app.ui.AuroraApp
+import com.auroravpn.app.ui.AuroraTelemetry
 import com.auroravpn.app.ui.AuroraViewModel
 
 class MainActivity : ComponentActivity() {
@@ -52,6 +53,13 @@ class MainActivity : ComponentActivity() {
     private val auroraViewModel by viewModels<AuroraViewModel>(factoryProducer = {
         AuroraViewModel.Factory(application)
     })
+
+    /**
+     * The session's telemetry window: the engine's samples, held as a history so
+     * the waveform has something to draw. Lives as long as the activity, so a
+     * rotation does not discard the shape of the traffic.
+     */
+    private val auroraTelemetry by lazy { AuroraTelemetry(auroraViewModel) }
 
     /**
      * The language this activity was built in.
@@ -266,6 +274,7 @@ class MainActivity : ComponentActivity() {
             WhiteAestherTheme(themeMode = settings.themeMode) {
                 AuroraApp(
                     viewModel = auroraViewModel,
+                    telemetry = auroraTelemetry,
                     onConnect = ::requestConnection,
                     onDisconnect = { AetherVpnService.stop(this) },
                     onClearLog = EngineLog::clear,

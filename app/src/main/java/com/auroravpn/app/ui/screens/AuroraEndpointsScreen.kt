@@ -1,11 +1,11 @@
 package com.auroravpn.app.ui.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
@@ -13,56 +13,65 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.auroravpn.app.ui.AuroraViewModel
+import com.auroravpn.app.ui.design.AuroraButton
+import com.auroravpn.app.ui.design.AuroraChip
+import com.auroravpn.app.ui.design.AuroraColors
+import com.auroravpn.app.ui.design.AuroraDetailScaffold
+import com.auroravpn.app.ui.design.AuroraDimensions
+import com.auroravpn.app.ui.design.AuroraGlassCard
+import com.auroravpn.app.ui.design.AuroraSectionHeader
+import com.auroravpn.app.ui.design.AuroraShapes
+import com.auroravpn.app.ui.design.AuroraTypography
+import com.auroravpn.app.ui.design.AuroraTextField
 import com.whitedns.whiteaesther.EndpointOperation
-import com.whitedns.whiteaesther.data.AppSettings
 import com.whitedns.whiteaesther.data.EndpointMode
 
 /**
  * Endpoint discovery, testing and selection.
  *
  * The list, the progress text and the errors all come from
- * [com.whitedns.whiteaesther.MainViewModel.endpointScannerState], which is fed by the
- * engine's own scanner. Nothing here is cached or invented, and an empty list means a
- * scan has not produced results yet.
+ * [com.whitedns.whiteaesther.MainViewModel.endpointScannerState], which is fed by
+ * the engine's own scanner. Nothing here is cached or invented, and an empty list
+ * means a scan has not produced results yet.
  *
- * Layout: the whole screen scrolls. Earlier versions pinned the results list to the
+ * The whole screen scrolls. An earlier version pinned the results list to the
  * bottom of a non-scrolling Column, which handed the LazyColumn whatever vertical
- * room the two cards above had left -- on a small phone that was less than one row,
- * and the list then measured its items into that strip and squeezed the address and
- * the RTT together. Scrolling the Column and letting the list take its own intrinsic
- * height removes the constraint at the source rather than patching the row.
+ * room the two cards above had left — on a small phone that was less than one
+ * row, and the list then measured its items into that strip and squeezed the
+ * address and the RTT together. Letting the list take its own intrinsic height
+ * removes the constraint at the source rather than patching the row.
+ *
+ * The endpoint scan has an unresolved failure mode: see
+ * docs/HERMES_CONTINUATION.md. The screen preserves the real scanner, keeps
+ * cancellation and lifecycle safe, and reports errors instead of substituting
+ * results.
  */
 @Composable
 fun AuroraEndpointsScreen(
     viewModel: AuroraViewModel,
+    onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val settings by viewModel.settings.collectAsStateWithLifecycle()
@@ -71,84 +80,107 @@ fun AuroraEndpointsScreen(
     val running = scanner.operation != null && scanner.operation != EndpointOperation.CANCELLING
     val selected = settings.customEndpoint
 
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(horizontal = 16.dp, vertical = 24.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+    AuroraDetailScaffold(
+        title = "Endpoints",
+        onBack = onBack,
+        modifier = modifier,
+        actions = {
+            AuroraButton(
+                text = if (running) "Cancel" else "Scan",
+                onClick = {
+                    if (running) {
+                        viewModel.cancelEndpointScan()
+                    } else {
+                        viewModel.scanEndpoints(settings)
+                    }
+                },
+            )
+        },
     ) {
-        Text(text = "Endpoints", style = MaterialTheme.typography.headlineSmall)
-
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-        ) {
-            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text(text = "Discovery", style = MaterialTheme.typography.titleMedium)
+        AuroraSectionHeader("Discovery")
+        AuroraGlassCard(modifier = Modifier.fillMaxWidth()) {
+            Column(
+                modifier = Modifier.padding(AuroraDimensions.cardPadding),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
                 Text(
-                    text = scanner.message
-                        ?: if (running) "Scanning…" else "Not scanning.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    text = when {
+                        scanner.operation == EndpointOperation.SCANNING ->
+                            "Scanning for reachable endpoints…"
+                        scanner.operation == EndpointOperation.TESTING ->
+                            "Testing the selected endpoint…"
+                        scanner.operation == EndpointOperation.CANCELLING ->
+                            "Cancelling…"
+                        scanner.message != null -> scanner.message.orEmpty()
+                        else -> "No scan has run yet."
+                    },
+                    style = AuroraTypography.Body,
+                    color = AuroraColors.TextSecondary,
                 )
                 scanner.error?.let { error ->
                     Text(
                         text = error,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.error,
+                        style = AuroraTypography.BodySmall,
+                        color = AuroraColors.Error,
                     )
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Button(
-                        onClick = { viewModel.scanEndpoints(settings) },
-                        enabled = !running,
-                        modifier = Modifier.semantics { contentDescription = "Scan for endpoints" },
-                    ) { Text("Scan") }
-                    OutlinedButton(
+                    AuroraButton(
+                        text = "Test selected",
                         onClick = { viewModel.testEndpoint(settings) },
                         enabled = !running && selected.isNotBlank(),
-                    ) { Text("Test selected") }
-                    OutlinedButton(
-                        onClick = { viewModel.cancelEndpointScan() },
-                        enabled = running,
-                    ) { Text("Cancel") }
+                    )
                 }
             }
         }
 
-        Card(modifier = Modifier.fillMaxWidth()) {
-            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text(text = "Selected endpoint", style = MaterialTheme.typography.titleMedium)
-                OutlinedTextField(
+        AuroraSectionHeader("Selected endpoint")
+        AuroraGlassCard(modifier = Modifier.fillMaxWidth()) {
+            Column(
+                modifier = Modifier.padding(AuroraDimensions.cardPadding),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                AuroraTextField(
                     value = selected,
                     onValueChange = { viewModel.save(settings.copy(customEndpoint = it)) },
-                    label = { Text("Address") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
+                    label = "Address",
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .semantics { contentDescription = "Endpoint address" },
                 )
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
                     EndpointMode.entries.forEach { mode ->
-                        AuroraSelectableRow(
-                            title = stringResource(mode.label),
+                        AuroraChip(
+                            text = stringResource(mode.label),
                             selected = settings.endpointMode == mode,
-                            onSelect = { viewModel.save(settings.copy(endpointMode = mode)) },
+                            onClick = { viewModel.save(settings.copy(endpointMode = mode)) },
                         )
                     }
                 }
                 if (selected.isNotBlank()) {
-                    OutlinedButton(onClick = { viewModel.resetEndpoint(settings) }) {
-                        Text("Clear pinned endpoint")
-                    }
+                    AuroraButton(
+                        text = "Clear pinned endpoint",
+                        onClick = { viewModel.resetEndpoint(settings) },
+                        enabled = !running,
+                    )
                 }
             }
         }
 
-        if (scanner.results.isNotEmpty()) {
-            Text(text = "Results", style = MaterialTheme.typography.titleMedium)
-            // Not fillMaxWidth on a height-constrained lazy list: the Column scrolls,
-            // and the list measures its items against the Column's full width without
-            // a fixed height taking a share of the space the rows need.
+        AuroraSectionHeader("Results (${scanner.results.size})")
+        if (scanner.results.isEmpty()) {
+            EmptyState(
+                title = if (running) "Scanning…" else "No endpoints yet",
+                body = if (running) {
+                    "The engine is looking for reachable endpoints."
+                } else {
+                    "Run a scan to find endpoints the engine can reach from this network."
+                },
+            )
+        } else {
             LazyColumn(
                 verticalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier.fillMaxWidth(),
@@ -169,24 +201,37 @@ fun AuroraEndpointsScreen(
 }
 
 @Composable
+private fun EmptyState(title: String, body: String) {
+    AuroraGlassCard(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier.padding(AuroraDimensions.cardPadding),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            Text(text = title, style = AuroraTypography.CardTitle)
+            Text(
+                text = body,
+                style = AuroraTypography.BodySmall,
+                color = AuroraColors.TextMuted,
+            )
+        }
+    }
+}
+
+@Composable
 private fun EndpointRow(
     peer: String,
     rttMillis: Long,
     isSelected: Boolean,
     onSelect: () -> Unit,
 ) {
-    Card(
+    AuroraGlassCard(
         modifier = Modifier
             .fillMaxWidth()
+            .clip(AuroraShapes.Card)
+            .clickable(onClick = onSelect)
             .semantics { contentDescription = "Endpoint $peer" },
-        onClick = onSelect,
-        colors = if (isSelected) {
-            CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
-        } else {
-            CardDefaults.cardColors()
-        },
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(modifier = Modifier.padding(AuroraDimensions.cardPadding)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.Top,
@@ -206,36 +251,33 @@ private fun EndpointRow(
                 // it a Persian UI reverses the octets and the colons of a long
                 // IPv6 literal land in the wrong order.
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = endpointAddress(peer),
-                        style = MaterialTheme.typography.bodyLarge.copy(
-                            fontFamily = FontFamily.Monospace,
-                        ),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        textAlign = TextAlign.Start,
-                    )
+                    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+                        Text(
+                            text = endpointAddress(peer),
+                            style = AuroraTypography.EndpointAddress,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            textAlign = TextAlign.Start,
+                        )
+                    }
                     Text(
                         text = endpointFamily(peer),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = AuroraTypography.MetricLabel,
+                        color = AuroraColors.TextMuted,
                         maxLines = 1,
                     )
                 }
 
                 // Reserved before the address is measured, so a wide address can
-                // never crowd the latency reading. wide enough for five digits and
-                // the unit without the column ever widening on a big number.
+                // never crowd the latency reading.
                 Box(
                     modifier = Modifier.widthIn(min = 64.dp),
                     contentAlignment = Alignment.CenterStart,
                 ) {
                     Text(
                         text = rttText(rttMillis),
-                        style = MaterialTheme.typography.bodyLarge.copy(
-                            fontFamily = FontFamily.Monospace,
-                        ),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = AuroraTypography.EndpointAddress,
+                        color = AuroraColors.TextSecondary,
                         maxLines = 1,
                         softWrap = false,
                         textAlign = TextAlign.Start,
@@ -250,23 +292,23 @@ private fun EndpointRow(
                 horizontalArrangement = Arrangement.End,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                OutlinedButton(
+                AuroraButton(
+                    text = if (isSelected) "Selected" else "Select",
                     onClick = onSelect,
-                    enabled = true,
                     modifier = Modifier
                         .heightIn(min = 48.dp)
                         .semantics { contentDescription = "Use endpoint $peer" },
-                ) { Text(if (isSelected) "Selected" else "Select") }
+                )
             }
         }
     }
 }
 
 /**
- * The coloured dot that says what state this endpoint is in: filled and green when the
- * user has chosen it, a hollow grey one when it is merely reachable, red when a test
- * reported it down. Colour alone never carries the meaning -- the label and the RTT
- * text do too -- so this is decoration rather than an accessibility dependency.
+ * The coloured dot that says what state this endpoint is in: filled and mint when
+ * the user has chosen it, hollow grey when merely reachable, red when a test
+ * reported it down. Colour alone never carries the meaning — the label and the
+ * RTT text do too — so this is decoration rather than an accessibility dependency.
  */
 @Composable
 private fun StatusDot(
@@ -275,9 +317,9 @@ private fun StatusDot(
     modifier: Modifier = Modifier,
 ) {
     val color = when {
-        selected -> MaterialTheme.colorScheme.primary
-        reachable -> MaterialTheme.colorScheme.onSurfaceVariant
-        else -> MaterialTheme.colorScheme.error
+        selected -> AuroraColors.AccentMint
+        reachable -> AuroraColors.TextMuted
+        else -> AuroraColors.Error
     }
     Box(
         modifier = modifier
@@ -292,14 +334,14 @@ private fun StatusDot(
  * ellipsis reaches last. A scanned peer is an address plus a port, and a long IPv6
  * literal plus `:8648` is wide enough on its own to overflow a small screen.
  */
-private fun endpointAddress(peer: String): AnnotatedString = androidx.compose.ui.text.buildAnnotatedString {
+private fun endpointAddress(peer: String): AnnotatedString = buildAnnotatedString {
     val hostEnd = peer.lastIndexOf(':')
     if (hostEnd <= 0) {
         append(peer)
         return@buildAnnotatedString
     }
     append(peer.substring(0, hostEnd))
-    withStyle(androidx.compose.ui.text.SpanStyle(fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold)) {
+    withStyle(androidx.compose.ui.text.SpanStyle(fontWeight = FontWeight.SemiBold)) {
         append(peer.substring(hostEnd))
     }
 }

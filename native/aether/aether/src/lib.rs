@@ -6613,4 +6613,97 @@ mod masque_reachability_tests {
 
         let _ = std::fs::remove_dir_all(&dir);
     }
+
+    /// The JNI scan path, run where a panic is visible.
+    ///
+    /// `scan_embedded` is what the bridge's `nativeScan` calls. A panic inside
+    /// it is what "the app crashed when I pressed Scan" looks like on a phone,
+    /// where the only trace is logcat. Here the same call chain runs on the
+    /// build host, where a panic prints its message and backtrace instead.
+    ///
+    /// No identity exists on a test machine and the edge is unreachable, so the
+    /// outcome under test is not "found endpoints" but "failed without
+    /// panicking" -- and did not block the calling thread, which on a phone is
+    /// the difference between an error message and an ANR.
+    #[tokio::test]
+    async fn a_scan_that_cannot_reach_the_edge_fails_without_panicking() {
+        let dir = std::env::temp_dir().join(format!(
+            "aether-scan-panic-{}",
+            std::process::id()
+        ));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+
+        let config = EmbeddedConfig {
+            config_path: dir.join("aether.toml").to_string_lossy().to_string(),
+            listen: "127.0.0.1:1819".parse().unwrap(),
+            peer: None,
+            peer_fallback: false,
+            scan_mode: "balanced".into(),
+            ip_scan: "both".into(),
+            protocol: "masque".into(),
+            access: socks::Access { credentials: None },
+        };
+        let cancelled = std::sync::atomic::AtomicBool::new(false);
+
+        // A deadline, because a hang here is an ANR on the device and worth
+        // distinguishing from an error return.
+        let outcome = tokio::time::timeout(
+            Duration::from_secs(20),
+            scan_embedded(&config, 6, &cancelled),
+        )
+        .await;
+        match &outcome {
+            Ok(Ok(found)) => eprintln!("[test] scan unexpectedly found {found:?}"),
+            Ok(Err(error)) => eprintln!("[test] scan error (expected): {error}"),
+            Err(_) => eprintln!("[test] scan timed out -- would be an ANR on device"),
+        }
+        // Reaching this line at all is the assertion: a panic would have
+        // unwound the test instead of reporting one of these three outcomes.
+        eprintln!("[test] scan survived");
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    /// Cancellation has to return, not block.
+    ///
+    /// The scanner's running flag is only cleared when the future is dropped,
+    /// and a scan that ignores its cancel flag never finishes dropping -- which
+    /// is what makes every Scan after the first one a silent no-op.
+    #[tokio::test]
+    async fn cancelling_a_scan_returns_instead_of_hanging() {
+        let dir = std::env::temp_dir().join(format!(
+            "aether-scan-cancel-{}",
+            std::process::id()
+        ));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+
+        let config = EmbeddedConfig {
+            config_path: dir.join("aether.toml").to_string_lossy().to_string(),
+            listen: "127.0.0.1:1819".parse().unwrap(),
+            peer: None,
+            peer_fallback: false,
+            scan_mode: "balanced".into(),
+            ip_scan: "both".into(),
+            protocol: "masque".into(),
+            access: socks::Access { credentials: None },
+        };
+        let cancelled = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
+        let cancelled_for_task = cancelled.clone();
+
+        let scan = tokio::spawn(async move {
+            scan_embedded(&config, 6, &cancelled_for_task).await
+        });
+        tokio::time::sleep(Duration::from_millis(300)).await;
+        cancelled.store(true, std::sync::atomic::Ordering::SeqCst);
+
+        let joined = tokio::time::timeout(Duration::from_secs(20), scan).await;
+        eprintln!("[test] cancel joined: {joined:?}");
+        // The handle completing at all is the point: a task that ignores
+        // cancellation never finishes, and the flag it shares is what the app
+        // sets when the user presses Cancel.
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
 }

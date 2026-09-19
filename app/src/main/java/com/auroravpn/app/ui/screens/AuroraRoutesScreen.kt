@@ -2,158 +2,171 @@ package com.auroravpn.app.ui.screens
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Card
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.auroravpn.app.ui.AuroraViewModel
-import com.whitedns.whiteaesther.data.EngineMode
-import com.whitedns.whiteaesther.data.SplitTunnelMode
+import com.auroravpn.app.ui.design.AuroraColors
+import com.auroravpn.app.ui.design.AuroraDetailScaffold
+import com.auroravpn.app.ui.design.AuroraDimensions
+import com.auroravpn.app.ui.design.AuroraGlassCard
+import com.auroravpn.app.ui.design.AuroraNavRow
+import com.auroravpn.app.ui.design.AuroraSectionHeader
+import com.auroravpn.app.ui.design.AuroraTypography
+import com.auroravpn.app.ui.home.RouteTopology
+import com.whitedns.whiteaesther.data.AppSettings
 
 /**
- * Routing rules and which apps the interface takes.
+ * Routes: the current path, the profile that chose it, and the memory that
+ * carries a working route from one network to the next.
  *
- * Every control writes straight through to [AuroraViewModel.save], so a change is
- * persisted the moment it is made. The engine reads the new rules on its next connect;
- * the screen never restarts the tunnel itself.
+ * Every value is read from settings or engine state. The topology names the
+ * transport settings actually hold, not the one the reference picture showed.
  */
 @Composable
 fun AuroraRoutesScreen(
     viewModel: AuroraViewModel,
+    onEndpoints: () -> Unit,
+    onTransport: () -> Unit,
+    onIdentity: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val settings by viewModel.settings.collectAsStateWithLifecycle()
-    val status by viewModel.engineStatus.collectAsStateWithLifecycle()
+    val connection by viewModel.connection.collectAsStateWithLifecycle()
+    val activeEndpoint by viewModel.activeEndpoint.collectAsStateWithLifecycle()
+    val scannerState by viewModel.endpointScannerState.collectAsStateWithLifecycle()
 
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(horizontal = 16.dp, vertical = 24.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+    val connected = connection is com.auroravpn.app.ui.AuroraConnectionState.Connected
+    val carrierName = stringResource(settings.carrier.label)
+    val routeProfile = if (settings.transport.isAutomatic) "AUTO" else settings.transport.wireName.uppercase()
+
+    AuroraDetailScaffold(
+        title = "Routes",
+        onBack = { },
+        modifier = modifier,
     ) {
-        Text(text = "Routes", style = MaterialTheme.typography.headlineSmall)
-
-        if (status.stage == com.whitedns.whiteaesther.service.EngineStage.CONNECTED) {
-            Text(
-                text = "Routing changes apply on the next connect.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-
-        RuleCard(
-            title = "Block these",
-            hint = "One per line. Domains and IPs the tunnel drops.",
-            value = settings.routeBlock,
-            onValueChange = { viewModel.save(settings.copy(routeBlock = it)) },
-        )
-        RuleCard(
-            title = "Let these through",
-            hint = "One per line. Domains and IPs that bypass the tunnel.",
-            value = settings.routeDirect,
-            onValueChange = { viewModel.save(settings.copy(routeDirect = it)) },
-        )
-
-        Card(modifier = Modifier.fillMaxWidth()) {
-            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text(text = "Split tunnelling", style = MaterialTheme.typography.titleMedium)
-                Text(
-                    text = "Which apps the interface takes. Changes apply on the next connect.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+        AuroraSectionHeader("Current Route")
+        AuroraGlassCard(modifier = Modifier.fillMaxWidth()) {
+            Column(
+                modifier = Modifier.padding(AuroraDimensions.cardPadding),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    Text(
+                        text = routeProfile,
+                        style = AuroraTypography.Button,
+                        color = AuroraColors.AccentMint,
+                    )
+                    Text(
+                        text = carrierName,
+                        style = AuroraTypography.MetricLabel,
+                        color = AuroraColors.TextMuted,
+                    )
+                }
+                RouteTopology(
+                    transport = settings.transport.wireName,
+                    endpoint = activeEndpoint,
+                    connected = connected,
                 )
-                SplitTunnelMode.entries.forEach { mode ->
-                    val selected = settings.splitTunnel.mode == mode
-                    AuroraSelectableRow(
-                        title = stringResource(mode.label),
-                        selected = selected,
-                        onSelect = {
-                            viewModel.save(settings.copy(splitTunnel = settings.splitTunnel.copy(mode = mode)))
-                        },
-                    )
-                }
-                if (settings.splitTunnel.mode != SplitTunnelMode.ALL) {
+            }
+        }
+
+        AuroraSectionHeader("Endpoint")
+        AuroraGlassCard(modifier = Modifier.fillMaxWidth()) {
+            Column(
+                modifier = Modifier.padding(AuroraDimensions.cardPadding),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                SettingLine(
+                    label = "Mode",
+                    value = stringResource(settings.endpointMode.label),
+                )
+                SettingLine(
+                    label = "Endpoint",
+                    value = activeEndpoint.ifBlank { "Selected automatically" },
+                )
+                SettingLine(
+                    label = "Known routes",
+                    value = scannerState.results.size.toString(),
+                )
+                scannerState.error?.let { error ->
                     Text(
-                        text = "${settings.splitTunnel.packages.size} apps selected",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    Text(
-                        text = "App selection is on the WAM app-list screen and is " +
-                            "preserved unchanged. This build does not remove it.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        text = error,
+                        style = AuroraTypography.BodySmall,
+                        color = AuroraColors.Error,
                     )
                 }
             }
         }
 
-        Card(modifier = Modifier.fillMaxWidth()) {
-            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text(text = "Engine mode", style = MaterialTheme.typography.titleMedium)
-                EngineMode.entries.forEach { mode ->
-                    AuroraSelectableRow(
-                        title = mode.wireName.uppercase(),
-                        selected = settings.mode == mode,
-                        onSelect = { viewModel.save(settings.copy(mode = mode)) },
-                    )
-                }
-                if (settings.mode == EngineMode.PROXY) {
-                    Text(
-                        text = "Proxy port ${settings.proxyPort}" +
-                            if (settings.lanSharing) " — shared on the LAN" else "",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
+        AuroraSectionHeader("Route Memory")
+        AuroraGlassCard(modifier = Modifier.fillMaxWidth()) {
+            Column(
+                modifier = Modifier.padding(AuroraDimensions.cardPadding),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                SettingLine(
+                    label = "Automatic transport",
+                    value = if (settings.transport.isAutomatic) "On" else "Off",
+                )
+                SettingLine(
+                    label = "Carrier fallback",
+                    value = if (settings.automaticCarrier) "On" else "Off",
+                )
+                SettingLine(
+                    label = "Dual stack",
+                    value = if (settings.dualStack) "IPv4 + IPv6" else "IPv4",
+                )
             }
         }
 
-        SwitchCard(
-            title = "Route sniffing",
-            subtitle = "Learn which destinations the tunnel should take.",
-            checked = settings.routeSniff,
-            onCheckedChange = { viewModel.save(settings.copy(routeSniff = it)) },
+        AuroraSectionHeader("More")
+        AuroraNavRow(
+            title = "Endpoints",
+            subtitle = "Scan, test and choose where the tunnel ends",
+            onClick = onEndpoints,
+        )
+        AuroraNavRow(
+            title = "Transport",
+            subtitle = "MASQUE H3/H2, WireGuard, WIW and MIM",
+            onClick = onTransport,
+        )
+        AuroraNavRow(
+            title = "Identity & Provisioning",
+            subtitle = "Export, import and inspect the device identity",
+            onClick = onIdentity,
         )
     }
 }
 
 @Composable
-fun RuleCard(
-    title: String,
-    hint: String,
-    value: String,
-    onValueChange: (String) -> Unit,
-) {
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text(text = title, style = MaterialTheme.typography.titleMedium)
-            Text(
-                text = hint,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            OutlinedTextField(
-                value = value,
-                onValueChange = onValueChange,
-                label = { Text(title) },
-                modifier = Modifier.fillMaxWidth(),
-            )
-        }
+private fun SettingLine(label: String, value: String) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+    ) {
+        Text(
+            text = label,
+            style = AuroraTypography.MetricLabel,
+            color = AuroraColors.TextMuted,
+        )
+        Text(
+            text = value,
+            style = AuroraTypography.Endpoint,
+            color = AuroraColors.TextPrimary,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
     }
 }
-
-

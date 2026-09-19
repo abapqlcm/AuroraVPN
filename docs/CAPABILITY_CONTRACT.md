@@ -149,3 +149,29 @@ endpoint state.**
 When the engine has not published a peer, the field is absent — not filled with a
 guessed value. "Endpoint unknown" was removed, because the word was presented as a
 reading when nothing had been measured.
+
+
+---
+
+## Phase 3 — final UI mapping
+
+The Network Orbit rebuild changed which screen holds each capability. The
+backend column above is unchanged; this is where the UI now exposes it.
+
+| Capability | Phase 3 screen | How it is reached |
+|---|---|---|
+| Connect / disconnect, status, metrics, route profile, live traffic | Home (`NetworkOrbitHomeScreen`) | tab |
+| Session duration, totals, exit address, waveform | Activity (`AuroraActivityScreen`) | tab |
+| Endpoint scan / test / select, IPv6-safe rows | Endpoints (`AuroraEndpointsScreen`) | Routes → Endpoints |
+| Transport (MASQUE H3/H2, WireGuard, WIW, MIM, AUTO) | Transport (`AuroraTransportScreen`) | Routes → Transport |
+| Route profile, route memory, fallback, dual stack | Routes (`AuroraRoutesScreen`) | tab |
+| Identity, provisioning, export / import | Identity (`AuroraIdentityScreen`) | Routes or Settings → Identity |
+| Diagnostics (VPN state, DNS, addresses, engine) | Diagnostics (`AuroraDiagnosticsScreen`) | Settings or Activity → Diagnostics |
+| Logs (severity, timestamps, clear, share) | Logs (`AuroraLogsScreen`) | Settings or Activity → Logs |
+| Carrier (Aether, Psiphon, Tor, region) | Carrier (`AuroraCarrierScreen`) | Settings → Carrier |
+| Chain (state, nodes, test, cancel) | Chain (`AuroraChainScreen`) | Settings → Chain |
+| DNS, split tunneling, SOCKS5, routing rules, obfuscation | Advanced (`AuroraAdvancedScreen`) | Settings → Advanced |
+| Theme, language, kill switch, strict kill switch | Settings (`AuroraSettingsScreen`) | tab |
+
+"Backend only" rows above are unchanged: still shipping, still not exposed, and
+still not removed.

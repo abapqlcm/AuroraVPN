@@ -3,99 +3,91 @@ package com.auroravpn.app.ui.screens
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material3.Card
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.auroravpn.app.ui.AuroraViewModel
+import com.auroravpn.app.ui.design.AuroraButton
+import com.auroravpn.app.ui.design.AuroraColors
+import com.auroravpn.app.ui.design.AuroraDetailScaffold
+import com.auroravpn.app.ui.design.AuroraDimensions
+import com.auroravpn.app.ui.design.AuroraGlassCard
+import com.auroravpn.app.ui.design.AuroraSectionHeader
+import com.auroravpn.app.ui.design.AuroraTypography
+import com.whitedns.whiteaesther.service.LogEntry
 import com.whitedns.whiteaesther.service.LogLevel
 
-/**
- * The engine and service log.
- *
- * The buffer is the one [com.whitedns.whiteaesther.service.EngineLog] holds: the engine
- * pushes into it from its native callback and the service from its own scope, and this
- * screen only reads it.
- */
 @Composable
 fun AuroraLogsScreen(
     viewModel: AuroraViewModel,
     onClear: () -> Unit,
     onShare: () -> Unit,
+    onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val logs by viewModel.logs.collectAsStateWithLifecycle()
-    val listState = rememberLazyListState()
 
-    // Follow the newest entry while the user is at the bottom of the list.
-    LaunchedEffect(logs.size) {
-        if (logs.isNotEmpty()) listState.animateScrollToItem(logs.lastIndex)
-    }
-
-    Column(
-        modifier = modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 24.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(text = "Logs", style = MaterialTheme.typography.headlineSmall)
+    AuroraDetailScaffold(
+        title = "Logs",
+        onBack = onBack,
+        modifier = modifier,
+        actions = {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedButton(onClick = onShare, enabled = logs.isNotEmpty()) { Text("Share") }
-                OutlinedButton(onClick = onClear, enabled = logs.isNotEmpty()) { Text("Clear") }
+                AuroraButton(text = "Clear", onClick = onClear, enabled = logs.isNotEmpty())
+                AuroraButton(text = "Share", onClick = onShare, enabled = logs.isNotEmpty())
             }
-        }
-        Text(
-            text = "${logs.size} entries. The engine writes these; the screen only reads them.",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-
-        LazyColumn(
-            state = listState,
-            modifier = Modifier.fillMaxSize(),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
-        ) {
-            items(logs, key = { it.timeMillis.toString() + it.message }) { entry ->
-                LogRow(entry = entry)
+        },
+    ) {
+        AuroraSectionHeader("Engine record (${logs.size})")
+        if (logs.isEmpty()) {
+            AuroraGlassCard(modifier = Modifier.fillMaxWidth()) {
+                Text(
+                    text = "Nothing has been logged yet.",
+                    style = AuroraTypography.Body,
+                    color = AuroraColors.TextMuted,
+                    modifier = Modifier.padding(AuroraDimensions.cardPadding),
+                )
+            }
+        } else {
+            LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                items(logs, key = { it.timeMillis.toString() + it.message.hashCode() }) { entry ->
+                    LogRow(entry)
+                }
             }
         }
     }
 }
 
 @Composable
-private fun LogRow(entry: com.whitedns.whiteaesther.service.LogEntry) {
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Column(modifier = Modifier.padding(12.dp)) {
+private fun LogRow(entry: LogEntry) {
+    AuroraGlassCard(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(AuroraDimensions.cardPadding)) {
             Text(
-                text = entry.formattedTime() + "  " + entry.tag,
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                text = entry.level.name,
+                style = AuroraTypography.MetricLabel,
+                color = severityColor(entry.level),
             )
             Text(
                 text = entry.message,
-                style = MaterialTheme.typography.bodyMedium,
-                color = when (entry.level) {
-                    LogLevel.ERROR -> MaterialTheme.colorScheme.error
-                    LogLevel.WARN -> MaterialTheme.colorScheme.onSurfaceVariant
-                    else -> MaterialTheme.colorScheme.onSurface
-                },
+                style = AuroraTypography.Endpoint,
+                color = AuroraColors.TextPrimary,
             )
         }
     }
+}
+
+private fun severityColor(level: LogLevel): Color = when (level) {
+    LogLevel.ERROR -> AuroraColors.Error
+    LogLevel.WARN -> AuroraColors.Warning
+    else -> AuroraColors.TextMuted
 }
