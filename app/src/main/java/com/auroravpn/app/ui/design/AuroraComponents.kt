@@ -46,6 +46,15 @@ object AuroraDimensions {
     val touchTarget = 44.dp
     val pillHeight = 28.dp
     val sectionGap = 24.dp
+
+    /** The height of the bottom navigation bar, content padding below it. */
+    val bottomBarHeight = 64.dp
+
+    /** Bottom bar plus its inset: the clearance content needs to clear it. */
+    val bottomBarClearance = bottomBarHeight + 12.dp
+
+    /** The vertical rhythm of the Home screen. */
+    val homeGap = 18.dp
 }
 
 /**
@@ -199,7 +208,7 @@ fun AuroraChip(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val tint = if (selected) AuroraColors.AccentMint else AuroraColors.TextSecondary
+    val tint = if (selected) AuroraColors.BrightMint else AuroraColors.TextSecondary
     Box(
         modifier = modifier
             .clip(AuroraShapes.Pill)
@@ -212,7 +221,9 @@ fun AuroraChip(
         Text(
             text = text,
             style = AuroraTypography.Button,
-            color = if (selected) Color.Black else tint,
+            // A washed mint wash with a mint text is a low-contrast smear; a
+            // bright mint on the dark glass beneath it is the readable pairing.
+            color = if (selected) AuroraColors.BrightMint else tint,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )

@@ -1,11 +1,13 @@
 package com.auroravpn.app.ui
 
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.runtime.getValue
+import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
@@ -28,24 +30,29 @@ import com.auroravpn.app.ui.screens.AuroraLogsScreen
 import com.auroravpn.app.ui.screens.AuroraRoutesScreen
 import com.auroravpn.app.ui.screens.AuroraSettingsScreen
 import com.auroravpn.app.ui.screens.AuroraTransportScreen
+import com.whitedns.whiteaesther.data.AppSettings
 
 /**
  * The whole Aurora surface.
  *
  * Four tabs hold the product's four standing interests, and every remaining
  * capability hangs off one of them as a detail screen. The bar hides itself on
- * a detail screen, because those have their own back affordance, and the tabs
- * are for moving between standing interests rather than for climbing a stack.
+ * a detail screen, because those have their own back affordance.
  *
- * The activity owns the one [AuroraViewModel] and passes it down, so a screen
- * never has to reach back for state and every screen survives rotation by
- * re-collecting the same flows.
+ * Navigation is deliberately un-animated. A crossfade between two screens each
+ * of which carries a Canvas and a flow collection is a frame of duplicated
+ * work on a phone that does not have a frame to spare, and the perception the
+ * user has of that is "lag". The instant swap reads as responsive instead.
+ *
+ * The one [AuroraViewModel] is owned here and passed down, so a screen never
+ * reaches back for state and every screen survives rotation by re-collecting
+ * the same flows.
  */
 @Composable
 fun AuroraApp(
     viewModel: AuroraViewModel,
     telemetry: AuroraTelemetry,
-    onConnect: (com.whitedns.whiteaesther.data.AppSettings) -> Unit,
+    onConnect: (AppSettings) -> Unit,
     onDisconnect: () -> Unit,
     onClearLog: () -> Unit,
     onShareLog: () -> Unit,
@@ -54,6 +61,7 @@ fun AuroraApp(
     val navController = rememberNavController()
     val backStack by navController.currentBackStackEntryAsState()
     val currentRoute = backStack?.destination?.route ?: AuroraTab.startRoute
+    val showBar = AuroraTab.entries.any { it.route == currentRoute }
 
     AuroraTheme {
         Box(modifier = modifier.fillMaxSize()) {
@@ -66,18 +74,27 @@ fun AuroraApp(
                 onClearLog = onClearLog,
                 onShareLog = onShareLog,
                 onBack = { navController.popBackStack() },
+                // Every primary screen is laid out inside this padding, which
+                // is how the bar stops covering the last row of a list.
+                contentPadding = if (showBar) {
+                    PaddingValues(bottom = com.auroravpn.app.ui.design.AuroraDimensions.bottomBarClearance)
+                } else {
+                    PaddingValues(0.dp)
+                }
             )
 
-            val showBar = AuroraTab.entries.any { it.route == currentRoute }
             if (showBar) {
-                androidx.compose.foundation.layout.Box(
+                Box(
                     modifier = Modifier.fillMaxSize(),
-                    contentAlignment = androidx.compose.ui.Alignment.BottomCenter,
+                    contentAlignment = Alignment.BottomCenter,
                 ) {
                     AuroraBottomBar(
                         destinations = AuroraTab.entries,
                         currentRoute = currentRoute,
                         onSelect = { route ->
+                            // A single top-level navigate with state saving, so a
+                            // tab you have already visited is the instance you
+                            // left, not a rebuild.
                             navController.navigate(route) {
                                 popUpTo(AuroraTab.Home.route) { saveState = true }
                                 launchSingleTop = true
@@ -96,17 +113,25 @@ private fun AuroraNavHost(
     navController: NavHostController,
     viewModel: AuroraViewModel,
     telemetry: AuroraTelemetry,
-    onConnect: (com.whitedns.whiteaesther.data.AppSettings) -> Unit,
+    onConnect: (AppSettings) -> Unit,
     onDisconnect: () -> Unit,
     onClearLog: () -> Unit,
     onShareLog: () -> Unit,
     onBack: () -> Unit,
+    contentPadding: PaddingValues,
     modifier: Modifier = Modifier,
 ) {
     NavHost(
         navController = navController,
         startDestination = AuroraTab.startRoute,
         modifier = modifier,
+        // No enter/exit transitions. Two heavy composables crossfading at once
+        // is the source of the navigation jank; an instant swap does not cost
+        // a frame.
+        enterTransition = { androidx.compose.animation.EnterTransition.None },
+        exitTransition = { androidx.compose.animation.ExitTransition.None },
+        popEnterTransition = { androidx.compose.animation.EnterTransition.None },
+        popExitTransition = { androidx.compose.animation.ExitTransition.None },
     ) {
         composable(AuroraTab.Home.route) {
             NetworkOrbitHomeScreen(
@@ -123,6 +148,7 @@ private fun AuroraNavHost(
                 onEndpoints = { navController.navigate(AuroraDetail.Endpoints.route) },
                 onTransport = { navController.navigate(AuroraDetail.Transport.route) },
                 onIdentity = { navController.navigate(AuroraDetail.Identity.route) },
+                contentPadding = contentPadding,
             )
         }
         composable(AuroraTab.Activity.route) {
@@ -131,6 +157,7 @@ private fun AuroraNavHost(
                 telemetry = telemetry,
                 onLogs = { navController.navigate(AuroraDetail.Logs.route) },
                 onDiagnostics = { navController.navigate(AuroraDetail.Diagnostics.route) },
+                contentPadding = contentPadding,
             )
         }
         composable(AuroraTab.Settings.route) {
@@ -142,6 +169,7 @@ private fun AuroraNavHost(
                 onCarrier = { navController.navigate(AuroraDetail.Carrier.route) },
                 onChain = { navController.navigate(AuroraDetail.Chain.route) },
                 onAdvanced = { navController.navigate(AuroraDetail.Advanced.route) },
+                contentPadding = contentPadding,
             )
         }
         composable(AuroraDetail.Endpoints.route) {

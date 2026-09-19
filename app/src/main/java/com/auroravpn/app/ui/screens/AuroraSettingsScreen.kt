@@ -43,11 +43,18 @@ fun AuroraSettingsScreen(
     onCarrier: () -> Unit,
     onChain: () -> Unit,
     onAdvanced: () -> Unit,
+    contentPadding: androidx.compose.foundation.layout.PaddingValues =
+        androidx.compose.foundation.layout.PaddingValues(0.dp),
     modifier: Modifier = Modifier,
 ) {
     val settings by viewModel.settings.collectAsStateWithLifecycle()
 
-    AuroraDetailScaffold(title = "Settings", onBack = { }, modifier = modifier) {
+    AuroraDetailScaffold(
+        title = "Settings",
+        onBack = { },
+        modifier = modifier,
+        bottomClearance = contentPadding.calculateBottomPadding(),
+    ) {
         AuroraSectionHeader("Appearance")
         AuroraGlassCard(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(AuroraDimensions.cardPadding), verticalArrangement = Arrangement.spacedBy(12.dp)) {

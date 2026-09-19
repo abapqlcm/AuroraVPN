@@ -41,6 +41,8 @@ fun AuroraActivityScreen(
     telemetry: AuroraTelemetry,
     onLogs: () -> Unit,
     onDiagnostics: () -> Unit,
+    contentPadding: androidx.compose.foundation.layout.PaddingValues =
+        androidx.compose.foundation.layout.PaddingValues(0.dp),
     modifier: Modifier = Modifier,
 ) {
     val connection by viewModel.connection.collectAsStateWithLifecycle()
@@ -60,6 +62,7 @@ fun AuroraActivityScreen(
         title = "Activity",
         onBack = { },
         modifier = modifier,
+        bottomClearance = contentPadding.calculateBottomPadding(),
     ) {
         AuroraSectionHeader("Session")
         AuroraGlassCard(modifier = Modifier.fillMaxWidth()) {

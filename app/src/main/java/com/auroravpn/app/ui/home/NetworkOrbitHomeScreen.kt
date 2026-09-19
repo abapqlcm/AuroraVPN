@@ -25,6 +25,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
@@ -35,27 +37,26 @@ import com.auroravpn.app.ui.AuroraViewModel
 import com.auroravpn.app.ui.design.AuroraColors
 import com.auroravpn.app.ui.design.AuroraDimensions
 import com.auroravpn.app.ui.design.AuroraLogo
-import com.auroravpn.app.ui.design.AuroraSectionHeader
 import com.auroravpn.app.ui.design.AuroraStatusPill
 import com.auroravpn.app.ui.design.AuroraTypography
 import com.auroravpn.app.ui.design.AuroraGlassCard
-import com.auroravpn.app.ui.design.AuroraMetric
-import com.auroravpn.app.ui.design.AuroraMetricDivider
 import com.auroravpn.app.ui.AuroraTelemetry
-import com.whitedns.whiteaesther.service.EngineStage
+import com.whitedns.whiteaesther.data.AppSettings
+import com.whitedns.whiteaesther.service.TrafficSample
 
 /**
- * The Home screen: the Network Orbit, and the live readings arranged under it.
+ * The Home screen: the orbital globe, and the live readings arranged under it.
  *
- * Every value here is collected from a WAM StateFlow. Nothing has a default
- * that could be mistaken for a reading, and no state is held locally: rotate
- * the phone and the same flows are re-read.
+ * The composition follows the reference: a top bar, a globe large enough to be
+ * the dominant element, status directly beneath it, a four-column metric row,
+ * then the two glass cards. Every value is collected from a WAM StateFlow;
+ * nothing has a default that could be mistaken for a reading.
  */
 @Composable
 fun NetworkOrbitHomeScreen(
     viewModel: AuroraViewModel,
     telemetry: AuroraTelemetry,
-    onConnect: (com.whitedns.whiteaesther.data.AppSettings) -> Unit,
+    onConnect: (AppSettings) -> Unit,
     onDisconnect: () -> Unit,
     onSettings: () -> Unit,
     modifier: Modifier = Modifier,
@@ -65,8 +66,8 @@ fun NetworkOrbitHomeScreen(
     val settings by viewModel.settings.collectAsStateWithLifecycle()
     val sessionElapsed by viewModel.sessionClock.collectAsStateWithLifecycle()
     val activeEndpoint by viewModel.activeEndpoint.collectAsStateWithLifecycle()
-    val addresses by viewModel.addresses.collectAsStateWithLifecycle()
     val downHistory by telemetry.downHistory.collectAsStateWithLifecycle()
+    val upHistory by telemetry.upHistory.collectAsStateWithLifecycle()
 
     val secure = connection is AuroraConnectionState.Connected
 
@@ -77,34 +78,36 @@ fun NetworkOrbitHomeScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(
-                    horizontal = AuroraDimensions.screenMarginLarge,
-                    vertical = 0.dp,
-                )
+                .padding(horizontal = AuroraDimensions.screenMarginLarge)
                 .padding(top = WindowInsets.statusBars.asPaddingValues().calculateTopPadding())
-                .padding(bottom = WindowInsets.navigationBars.asPaddingValues()
-                    .calculateBottomPadding() + AuroraDimensions.sectionGap),
-            verticalArrangement = Arrangement.spacedBy(AuroraDimensions.cardGapLarge),
+                // The bottom bar is drawn over this content; the inset plus its
+                // height is what keeps the last card from sliding under it.
+                .padding(
+                    bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() +
+                        AuroraDimensions.bottomBarClearance,
+                ),
+            verticalArrangement = Arrangement.spacedBy(AuroraDimensions.homeGap),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            AuroraTopBar(
-                state = connection,
-                onSettings = onSettings,
-            )
+            AuroraTopBar(state = connection, onSettings = onSettings)
 
             // The globe is tappable: the same real operation the button would
             // invoke, and no other.
+            //
+            // The clip is the fix for the square flash: a Box with an aspect
+            // ratio is a rectangle, and an unclipped ripple on it paints a
+            // square halo over the screen. Clipped to the circle first, the
+            // indication stays inside the globe, where the tap happened.
             NetworkOrbit(
                 secure = secure,
                 modifier = Modifier
-                    .fillMaxWidth(0.5f)
-                    .semantics { contentDescription = if (secure) "Connected. Tap to disconnect." else "Disconnected. Tap to connect." }
-                    .clickable(enabled = true) {
-                        if (secure) {
-                            onDisconnect()
-                        } else {
-                            onConnect(settings)
-                        }
+                    .fillMaxWidth(0.62f)
+                    .clip(CircleShape)
+                    .semantics {
+                        contentDescription = if (secure) "Connected. Tap to disconnect." else "Disconnected. Tap to connect."
+                    }
+                    .clickable {
+                        if (secure) onDisconnect() else onConnect(settings)
                     },
             )
 
@@ -118,7 +121,7 @@ fun NetworkOrbitHomeScreen(
                 connection = connection,
                 traffic = traffic,
                 sessionBytes = traffic.received + traffic.sent,
-                sessionElapsedMillis = sessionElapsed,
+                connected = secure,
             )
 
             RouteProfileCard(
@@ -128,13 +131,14 @@ fun NetworkOrbitHomeScreen(
             )
 
             LiveTrafficCard(
-                history = downHistory,
+                downHistory = downHistory,
+                upHistory = upHistory,
                 traffic = traffic,
                 connected = secure,
                 telemetry = telemetry,
             )
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(4.dp))
         }
     }
 }
@@ -158,14 +162,8 @@ private fun AuroraTopBar(
         ) {
             AuroraLogo()
             Column {
-                Text(
-                    text = "AURORA",
-                    style = AuroraTypography.Brand,
-                )
-                Text(
-                    text = "NETWORK ORBIT",
-                    style = AuroraTypography.BrandSubtitle,
-                )
+                Text(text = "AURORA", style = AuroraTypography.Brand)
+                Text(text = "NETWORK ORBIT", style = AuroraTypography.BrandSubtitle)
             }
         }
 
@@ -173,10 +171,7 @@ private fun AuroraTopBar(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            AuroraStatusPill(
-                label = pillLabel(state),
-                dotColor = pillDot(state),
-            )
+            AuroraStatusPill(label = pillLabel(state), dotColor = pillDot(state))
             Box(
                 modifier = Modifier
                     .size(AuroraDimensions.touchTarget)
@@ -185,11 +180,7 @@ private fun AuroraTopBar(
                     .semantics { contentDescription = "Settings" },
                 contentAlignment = Alignment.Center,
             ) {
-                Text(
-                    text = "⚙",
-                    style = AuroraTypography.Endpoint,
-                    color = AuroraColors.TextSecondary,
-                )
+                Text(text = "⚙", style = AuroraTypography.Endpoint, color = AuroraColors.TextSecondary)
             }
         }
     }
@@ -204,7 +195,7 @@ private fun pillLabel(state: AuroraConnectionState): String = when (state) {
     is AuroraConnectionState.Failed -> "Error"
 }
 
-private fun pillDot(state: AuroraConnectionState): androidx.compose.ui.graphics.Color = when (state) {
+private fun pillDot(state: AuroraConnectionState): Color = when (state) {
     is AuroraConnectionState.Connected -> AuroraColors.Secure
     is AuroraConnectionState.Idle -> AuroraColors.TextSecondary
     is AuroraConnectionState.Failed -> AuroraColors.Error
@@ -213,22 +204,6 @@ private fun pillDot(state: AuroraConnectionState): androidx.compose.ui.graphics.
 }
 
 // ------------------------------------------------------- connection status --
-
-@Composable
-private fun ConnectingText(message: String) {
-    Text(
-        text = "CONNECTING",
-        style = AuroraTypography.StatusLarge,
-        color = AuroraColors.Warning,
-    )
-    Text(
-        text = message.ifBlank { "Establishing secure connection…" },
-        style = AuroraTypography.Endpoint,
-        color = AuroraColors.TextSecondary,
-        maxLines = 2,
-        overflow = TextOverflow.Ellipsis,
-    )
-}
 
 @Composable
 private fun ConnectionStatus(
@@ -240,15 +215,11 @@ private fun ConnectionStatus(
     Column(
         modifier = modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(2.dp),
+        verticalArrangement = Arrangement.spacedBy(3.dp),
     ) {
         when (connection) {
             is AuroraConnectionState.Connected -> {
-                Text(
-                    text = "SECURE",
-                    style = AuroraTypography.StatusLarge,
-                    color = AuroraColors.Secure,
-                )
+                Text("SECURE", style = AuroraTypography.StatusLarge, color = AuroraColors.Secure)
                 Text(
                     text = lineFor(endpoint, transport),
                     style = AuroraTypography.Endpoint,
@@ -260,11 +231,7 @@ private fun ConnectionStatus(
             is AuroraConnectionState.Connecting -> ConnectingText(connection.message)
             is AuroraConnectionState.Preparing -> ConnectingText(connection.message)
             is AuroraConnectionState.Stopping -> {
-                Text(
-                    text = "DISCONNECTING",
-                    style = AuroraTypography.StatusLarge,
-                    color = AuroraColors.Warning,
-                )
+                Text("DISCONNECTING", style = AuroraTypography.StatusLarge, color = AuroraColors.Warning)
                 Text(
                     text = connection.message.ifBlank { "Ending the session." },
                     style = AuroraTypography.Endpoint,
@@ -272,11 +239,7 @@ private fun ConnectionStatus(
                 )
             }
             is AuroraConnectionState.Failed -> {
-                Text(
-                    text = "CONNECTION ERROR",
-                    style = AuroraTypography.StatusLarge,
-                    color = AuroraColors.Error,
-                )
+                Text("CONNECTION ERROR", style = AuroraTypography.StatusLarge, color = AuroraColors.Error)
                 Text(
                     text = connection.message.ifBlank { "The engine reported a failure." },
                     style = AuroraTypography.Endpoint,
@@ -286,23 +249,29 @@ private fun ConnectionStatus(
                 )
             }
             is AuroraConnectionState.Idle -> {
-                Text(
-                    text = "DISCONNECTED",
-                    style = AuroraTypography.StatusLarge,
-                    color = AuroraColors.TextPrimary,
-                )
-                Text(
-                    text = "No active connection",
-                    style = AuroraTypography.Endpoint,
-                    color = AuroraColors.TextMuted,
-                )
+                Text("DISCONNECTED", style = AuroraTypography.StatusLarge, color = AuroraColors.TextPrimary)
+                Text("No active connection", style = AuroraTypography.Endpoint, color = AuroraColors.TextMuted)
             }
         }
     }
 }
 
-private fun Modifier.trafficMarkBackground(): Modifier =
-    background(AuroraColors.GlassSurface)
+/**
+ * Connecting states tell the user what is happening without naming the engine.
+ * "Establishing secure tunnel…" is a truthful description of the work; the
+ * internal engine name belongs on the diagnostics screen.
+ */
+@Composable
+private fun ConnectingText(message: String) {
+    Text("CONNECTING", style = AuroraTypography.StatusLarge, color = AuroraColors.Warning)
+    Text(
+        text = message.ifBlank { "Establishing secure tunnel…" },
+        style = AuroraTypography.Endpoint,
+        color = AuroraColors.TextSecondary,
+        maxLines = 2,
+        overflow = TextOverflow.Ellipsis,
+    )
+}
 
 private fun lineFor(endpoint: String, transport: String): String = when {
     endpoint.isBlank() -> transport.uppercase()
@@ -315,45 +284,64 @@ private fun lineFor(endpoint: String, transport: String): String = when {
 @Composable
 private fun MetricsRow(
     connection: AuroraConnectionState,
-    traffic: com.whitedns.whiteaesther.service.TrafficSample,
+    traffic: TrafficSample,
     sessionBytes: Long,
-    sessionElapsedMillis: Long,
+    connected: Boolean,
     modifier: Modifier = Modifier,
 ) {
-    val connected = connection is AuroraConnectionState.Connected
-
     Row(
         modifier = modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceEvenly,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        AuroraMetric(
-            label = "Latency",
-            // The engine publishes RTT only inside scan results, not for a live
-            // peer, so there is no latency to show here yet. Em-dash is the
-            // honest "unavailable", not a placeholder that looks like a reading.
-            value = "—",
-        )
-        AuroraMetricDivider()
-        AuroraMetric(
+        // The engine publishes RTT only inside scan results, not for a live
+        // peer, so there is no latency to show here. Em-dash is the honest
+        // "unavailable", not a placeholder that looks like a reading.
+        MetricColumn(label = "Latency", value = "—", modifier = Modifier.weight(1f))
+        MetricDivider()
+        MetricColumn(
             label = "Download",
+            modifier = Modifier.weight(1f),
             value = if (connected && traffic.supported) {
                 AuroraTelemetry.formatRate(traffic.downloadPerSecond)
             } else "—",
         )
-        AuroraMetricDivider()
-        AuroraMetric(
+        MetricDivider()
+        MetricColumn(
             label = "Upload",
+            modifier = Modifier.weight(1f),
             value = if (connected && traffic.supported) {
                 AuroraTelemetry.formatRate(traffic.uploadPerSecond)
             } else "—",
         )
-        AuroraMetricDivider()
-        AuroraMetric(
+        MetricDivider()
+        MetricColumn(
             label = "Session",
+            modifier = Modifier.weight(1f),
             value = if (connected) AuroraTelemetry.formatBytes(sessionBytes) else "—",
         )
     }
+}
+
+@Composable
+private fun MetricColumn(label: String, value: String, modifier: Modifier = Modifier) {
+    Column(
+        modifier = modifier,
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(2.dp),
+    ) {
+        Text(text = value, style = AuroraTypography.MetricValue, color = AuroraColors.TextPrimary)
+        Text(text = label, style = AuroraTypography.MetricLabel, color = AuroraColors.TextMuted)
+    }
+}
+
+@Composable
+private fun MetricDivider() {
+    Box(
+        modifier = Modifier
+            .size(width = 1.dp, height = 28.dp)
+            .background(AuroraColors.Translucency.Divider),
+    )
 }
 
 // ---------------------------------------------------------- route profile --
@@ -375,22 +363,10 @@ private fun RouteProfileCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text(
-                    text = "AUTO",
-                    style = AuroraTypography.Button,
-                    color = AuroraColors.AccentMint,
-                )
-                Text(
-                    text = "Route Profile",
-                    style = AuroraTypography.MetricLabel,
-                    color = AuroraColors.TextMuted,
-                )
+                Text("AUTO", style = AuroraTypography.Button, color = AuroraColors.AccentMint)
+                Text("Route Profile", style = AuroraTypography.MetricLabel, color = AuroraColors.TextMuted)
             }
-            RouteTopology(
-                transport = transport,
-                endpoint = endpoint,
-                connected = connected,
-            )
+            RouteTopology(transport = transport, endpoint = endpoint, connected = connected)
         }
     }
 }
@@ -399,8 +375,9 @@ private fun RouteProfileCard(
 
 @Composable
 private fun LiveTrafficCard(
-    history: List<Float>,
-    traffic: com.whitedns.whiteaesther.service.TrafficSample,
+    downHistory: List<Float>,
+    upHistory: List<Float>,
+    traffic: TrafficSample,
     connected: Boolean,
     telemetry: AuroraTelemetry,
     modifier: Modifier = Modifier,
@@ -419,26 +396,21 @@ private fun LiveTrafficCard(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    // The waveform mark in its own dark square.
                     Box(
                         modifier = Modifier
                             .size(28.dp)
                             .clip(androidx.compose.foundation.shape.RoundedCornerShape(8.dp))
-                            .trafficMarkBackground(),
+                            .background(AuroraColors.GlassSurface),
                         contentAlignment = Alignment.Center,
                     ) {
                         TrafficWaveform(
-                            history = history.takeLast(24),
-                            modifier = Modifier
-                                .padding(horizontal = 4.dp)
-                                .height(16.dp),
+                            history = downHistory.takeLast(24),
+                            secondHistory = upHistory.takeLast(24),
+                            modifier = Modifier.padding(horizontal = 4.dp).height(16.dp),
                             active = connected,
                         )
                     }
-                    Text(
-                        text = "Live Traffic",
-                        style = AuroraTypography.CardTitle,
-                    )
+                    Text("Live Traffic", style = AuroraTypography.CardTitle)
                 }
                 Text(
                     text = if (connected) "→" else "",
@@ -463,15 +435,20 @@ private fun LiveTrafficCard(
                 )
             }
 
+            // The full-width waveform: the card's reason for existing.
+            TrafficWaveform(
+                history = downHistory,
+                secondHistory = upHistory,
+                modifier = Modifier.fillMaxWidth().height(56.dp),
+                active = connected,
+                filled = true,
+            )
+
             if (!connected) {
-                Text(
-                    text = "No session is running.",
-                    style = AuroraTypography.BodySmall,
-                    color = AuroraColors.TextMuted,
-                )
+                Text("No session is running.", style = AuroraTypography.BodySmall, color = AuroraColors.TextMuted)
             } else if (!traffic.supported) {
                 Text(
-                    text = "This device does not report per-app traffic counters.",
+                    "This device does not report per-app traffic counters.",
                     style = AuroraTypography.BodySmall,
                     color = AuroraColors.TextMuted,
                 )

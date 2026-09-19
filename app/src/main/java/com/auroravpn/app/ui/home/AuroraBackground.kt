@@ -82,6 +82,8 @@ fun TrafficWaveform(
     history: List<Float>,
     modifier: Modifier = Modifier,
     active: Boolean = true,
+    secondHistory: List<Float> = emptyList(),
+    filled: Boolean = false,
 ) {
     Canvas(modifier = modifier) {
         if (history.isEmpty()) {
@@ -95,28 +97,63 @@ fun TrafficWaveform(
             return@Canvas
         }
 
-        val stepX = if (history.size > 1) size.width / (history.size - 1) else 0f
-        // Catmull-Rom to Bézier: a curve through every sample rather than a
-        // polyline, which is what makes the trace read as traffic.
-        val points = history.mapIndexed { index, value ->
-            Offset(
-                x = index * stepX,
-                y = size.height * (1f - value.coerceIn(0f, 1f)) * 0.85f + size.height * 0.075f,
+        // The primary trace, cyan, drawn once as a glow and once as a line.
+        drawSeries(
+            history = history,
+            color = if (active) AuroraColors.BrightMint else AuroraColors.TextMuted.copy(alpha = 0.4f),
+            glow = AuroraColors.AccentMint.copy(alpha = if (active) 0.22f else 0.06f),
+            filled = filled,
+        )
+        // The secondary trace, blue, underneath. Drawn after so a crossing
+        // reads as two channels rather than as a broken line.
+        if (secondHistory.isNotEmpty()) {
+            drawSeries(
+                history = secondHistory,
+                color = if (active) AuroraColors.BlueSecondary else AuroraColors.TextMuted.copy(alpha = 0.3f),
+                glow = AuroraColors.Blue.copy(alpha = if (active) 0.16f else 0.04f),
+                filled = false,
             )
         }
+    }
+}
 
-        // A glow underlay: the same path, wider and translucent.
-        drawPathThrough(
-            points = points,
-            color = AuroraColors.AccentMint.copy(alpha = if (active) 0.22f else 0.06f),
-            width = 5f,
-        )
-        drawPathThrough(
-            points = points,
-            color = if (active) AuroraColors.BrightMint else AuroraColors.TextMuted.copy(alpha = 0.4f),
-            width = 1.8f,
+/**
+ * One series: a smooth curve through the samples, with an optional glow
+ * underlay and an optional translucent fill to the baseline.
+ */
+private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawSeries(
+    history: List<Float>,
+    color: Color,
+    glow: Color,
+    filled: Boolean,
+) {
+    val stepX = if (history.size > 1) size.width / (history.size - 1) else 0f
+    // Catmull-Rom to Bézier: a curve through every sample rather than a
+    // polyline, which is what makes the trace read as traffic.
+    val points = history.mapIndexed { index, value ->
+        Offset(
+            x = index * stepX,
+            y = size.height * (1f - value.coerceIn(0f, 1f)) * 0.85f + size.height * 0.075f,
         )
     }
+
+    // The glow underlay: the same path, wider and translucent.
+    drawPathThrough(points = points, color = glow, width = 5f)
+    // The fill: the area under the curve, fading toward the baseline.
+    if (filled) {
+        val fill = androidx.compose.ui.graphics.Path()
+        fill.moveTo(points.first().x, size.height)
+        points.forEach { fill.lineTo(it.x, it.y) }
+        fill.lineTo(points.last().x, size.height)
+        fill.close()
+        drawPath(
+            path = fill,
+            brush = Brush.verticalGradient(
+                colors = listOf(color.copy(alpha = 0.20f), Color.Transparent),
+            ),
+        )
+    }
+    drawPathThrough(points = points, color = color, width = 1.8f)
 }
 
 /**

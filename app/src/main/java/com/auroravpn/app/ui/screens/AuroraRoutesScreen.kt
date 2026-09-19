@@ -37,6 +37,8 @@ fun AuroraRoutesScreen(
     onEndpoints: () -> Unit,
     onTransport: () -> Unit,
     onIdentity: () -> Unit,
+    contentPadding: androidx.compose.foundation.layout.PaddingValues =
+        androidx.compose.foundation.layout.PaddingValues(0.dp),
     modifier: Modifier = Modifier,
 ) {
     val settings by viewModel.settings.collectAsStateWithLifecycle()
@@ -52,6 +54,7 @@ fun AuroraRoutesScreen(
         title = "Routes",
         onBack = { },
         modifier = modifier,
+        bottomClearance = contentPadding.calculateBottomPadding(),
     ) {
         AuroraSectionHeader("Current Route")
         AuroraGlassCard(modifier = Modifier.fillMaxWidth()) {

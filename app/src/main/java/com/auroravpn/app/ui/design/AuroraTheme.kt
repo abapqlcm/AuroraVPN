@@ -29,6 +29,13 @@ fun AuroraTheme(content: @Composable () -> Unit) {
             onSurface = AuroraColors.TextPrimary,
             surfaceVariant = AuroraColors.GlassSurfaceStrong,
             onSurfaceVariant = AuroraColors.TextSecondary,
+            // Selected containers across every control read from these two.
+            // A bright mint container with dark text was the contrast bug;
+            // here the container stays a wash and the content stays bright.
+            secondaryContainer = AuroraColors.Translucency.Mint,
+            onSecondaryContainer = AuroraColors.BrightMint,
+            tertiaryContainer = AuroraColors.Translucency.Mint,
+            onTertiaryContainer = AuroraColors.BrightMint,
             outline = AuroraColors.GlassBorder,
             outlineVariant = AuroraColors.GlassBorder,
             error = AuroraColors.Error,

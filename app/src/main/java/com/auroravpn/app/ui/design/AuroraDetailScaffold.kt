@@ -43,6 +43,7 @@ fun AuroraDetailScaffold(
     title: String,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
+    bottomClearance: androidx.compose.ui.unit.Dp = 0.dp,
     actions: @Composable () -> Unit = {},
     content: @Composable () -> Unit,
 ) {
@@ -55,7 +56,10 @@ fun AuroraDetailScaffold(
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = AuroraDimensions.screenMarginLarge)
                 .padding(top = WindowInsets.statusBars.asPaddingValues().calculateTopPadding())
-                .padding(bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 24.dp),
+                .padding(
+                    bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() +
+                        24.dp + bottomClearance,
+                ),
             verticalArrangement = Arrangement.spacedBy(AuroraDimensions.cardGapLarge),
         ) {
             AuroraDetailTopBar(title = title, onBack = onBack, actions = actions)
