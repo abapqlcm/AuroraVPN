@@ -329,9 +329,10 @@ private fun MetricsRow(
     ) {
         AuroraMetric(
             label = "Latency",
-            // The engine publishes RTT only for a live peer; nothing else is
-            // shown, because nothing else is measured.
-            value = if (connected && traffic.supported) "—" else "—",
+            // The engine publishes RTT only inside scan results, not for a live
+            // peer, so there is no latency to show here yet. Em-dash is the
+            // honest "unavailable", not a placeholder that looks like a reading.
+            value = "—",
         )
         AuroraMetricDivider()
         AuroraMetric(
