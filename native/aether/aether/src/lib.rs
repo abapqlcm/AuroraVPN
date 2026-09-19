@@ -6627,10 +6627,7 @@ mod masque_reachability_tests {
     /// the difference between an error message and an ANR.
     #[tokio::test]
     async fn a_scan_that_cannot_reach_the_edge_fails_without_panicking() {
-        let dir = std::env::temp_dir().join(format!(
-            "aether-scan-panic-{}",
-            std::process::id()
-        ));
+        let dir = std::env::temp_dir().join(format!("aether-scan-panic-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();
 
@@ -6672,10 +6669,7 @@ mod masque_reachability_tests {
     /// is what makes every Scan after the first one a silent no-op.
     #[tokio::test]
     async fn cancelling_a_scan_returns_instead_of_hanging() {
-        let dir = std::env::temp_dir().join(format!(
-            "aether-scan-cancel-{}",
-            std::process::id()
-        ));
+        let dir = std::env::temp_dir().join(format!("aether-scan-cancel-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();
 
@@ -6692,9 +6686,8 @@ mod masque_reachability_tests {
         let cancelled = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
         let cancelled_for_task = cancelled.clone();
 
-        let scan = tokio::spawn(async move {
-            scan_embedded(&config, 6, &cancelled_for_task).await
-        });
+        let scan =
+            tokio::spawn(async move { scan_embedded(&config, 6, &cancelled_for_task).await });
         tokio::time::sleep(Duration::from_millis(300)).await;
         cancelled.store(true, std::sync::atomic::Ordering::SeqCst);
 
